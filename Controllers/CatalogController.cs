@@ -8,7 +8,7 @@ using System.Security.Claims;
 using System.Text.Json;
 namespace CatalogStudio.Controllers;
 [Authorize]
-public class CatalogController(AppDbContext db,FileService files,UserPreferenceService prefs,OpenAiImageService ai,PromptBuilderService prompts,CatalogComposerService composer,CatalogSceneService scenes,TokenService tokens,ILogger<CatalogController> logger):Controller {
+public class CatalogController(AppDbContext db,FileService files,UserPreferenceService prefs,OpenAiImageService ai,PromptBuilderService prompts,CatalogComposerService composer,CatalogSceneService scenes,TokenService tokens,CatalogRetentionService retention,ILogger<CatalogController> logger):Controller {
  int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
  string Copy(string source){var target=files.NewPath();System.IO.File.Copy(files.PathFor(source),target);return Path.GetFileName(target);}
  [HttpPost,RequestSizeLimit(125*1024*1024)]
@@ -63,6 +63,7 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  db.Catalogs.Add(catalog);await db.SaveChangesAsync(ct);await tokens.Complete(reservation);await transaction.CommitAsync(ct);
  }
  scratch.Remove(final);
+ await retention.Cleanup();
  }catch{if(reservation!=null)await tokens.Refund(reservation);throw;}
  finally{foreach(var name in scratch)files.Delete(name);}
  }

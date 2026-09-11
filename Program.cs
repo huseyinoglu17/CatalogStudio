@@ -35,7 +35,7 @@ builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInter
 builder.Services.ConfigureApplicationCookie(o => { o.Cookie.HttpOnly=true; o.Cookie.SameSite=SameSiteMode.Lax; o.Cookie.SecurePolicy=builder.Environment.IsDevelopment()?CookieSecurePolicy.SameAsRequest:CookieSecurePolicy.Always; o.LoginPath = "/Account/Login"; o.AccessDeniedPath = "/Account/AccessDenied"; o.ExpireTimeSpan = TimeSpan.FromDays(30); o.Events.OnValidatePrincipal = async c => { await SecurityStampValidator.ValidatePrincipalAsync(c); if (c.Principal?.Identity?.IsAuthenticated == true) { var users = c.HttpContext.RequestServices.GetRequiredService<UserManager<AppUser>>(); var user = await users.GetUserAsync(c.Principal); if (user == null || !user.IsActive) { c.RejectPrincipal(); await c.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme); } } }; });
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 125 * 1024 * 1024);
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 125 * 1024 * 1024);
-builder.Services.AddScoped<FileService>(); builder.Services.AddScoped<TokenService>(); builder.Services.AddScoped<UserPreferenceService>(); builder.Services.AddSingleton<AgeCalculatorService>(); builder.Services.AddSingleton<PromptBuilderService>(); builder.Services.AddSingleton<CatalogSceneService>(); builder.Services.AddScoped<CatalogComposerService>();
+builder.Services.AddScoped<CatalogRetentionService>(); builder.Services.AddScoped<FileService>(); builder.Services.AddScoped<TokenService>(); builder.Services.AddScoped<UserPreferenceService>(); builder.Services.AddSingleton<AgeCalculatorService>(); builder.Services.AddSingleton<PromptBuilderService>(); builder.Services.AddSingleton<CatalogSceneService>(); builder.Services.AddScoped<CatalogComposerService>();
 builder.Services.AddHttpClient<OpenAiImageService>(c => { c.BaseAddress = new Uri("https://api.openai.com/v1/"); c.Timeout = TimeSpan.FromMinutes(5); });
 var app = builder.Build();
 app.UseForwardedHeaders();
@@ -52,6 +52,7 @@ using (var scope=app.Services.CreateScope()) {
   app.Logger.LogInformation("Database migrations completed.");
   await DbInitializer.SeedRolesAndAdminAsync(scope.ServiceProvider,app.Environment,app.Configuration);
   await scope.ServiceProvider.GetRequiredService<TokenService>().RecoverPending();
+  await scope.ServiceProvider.GetRequiredService<CatalogRetentionService>().Cleanup();
  } catch(Exception ex) {
   app.Logger.LogCritical("Startup storage or migration failed ({Type}). Verify volume permissions and database configuration.",ex.GetType().Name);
   throw;

@@ -222,3 +222,6 @@ Tek sunuculu MVP: başlangıçta Pending üretim rezervasyonları iade edilir. B
 
 ## Mobil öncelikli arayüz
 Telefonda sabit alt menü, üstte token bakiyesi ve hesap menüsü; okunaklı 16px form alanları ve büyük dokunma alanları. Fotoğraf önizlemelerinde tek tek kaldırma, katalog kartlarında görüntüle/sil ayrımı, sonuç ekranında tam boy görsel ve indirme/yeniden üretim bölümleri. Masaüstünde iki sütun form ve çok sütun katalog arşivi. 320 ve 390 piksel mobil, 1440 piksel masaüstü genişliğinde formun yatay taşma kontrolü yapıldı. 390 piksel arşiv boş durumu ve 1440 piksel form görsel olarak incelendi. Fiziksel iOS/Android cihaz testi yapılmadı. 63 uygulama kontrolü tekrar geçti.
+
+## Otomatik katalog temizliği
+Her kullanıcı için yalnızca son başarılı katalog saklanır. Yeni üretim veya yeniden üretim başarıyla tamamlandığında önceki kayıtlar ve bunların çıktı/kaynak fotoğrafları silinir. Kayıtlı marka logosu ve son kataloğun yeniden üretim girdileri korunur. Uygulama başlangıcında da birikmiş eski kataloglar temizlenir; dolayısıyla Railway redeploy sonrası mevcut arşiv otomatik küçülür. İndirmek istediğiniz eski çıktıları deploy öncesinde kaydedin. Başarısız üretim mevcut kataloğu silmez. Volume yedekleri bu işlemden bağımsızdır.
