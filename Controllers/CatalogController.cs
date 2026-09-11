@@ -25,7 +25,7 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  var raw=new List<string>();foreach(var file in m.VariantImages){var name=await files.SaveAsync(file,ct);raw.Add(name);uploaded.Add(name);}
  var snapshot=Copy(logo);uploaded.Add(snapshot);
  await prefs.SaveAsync(UserId,m.BrandName,logo);uploaded.Remove(logo);
- var catalog=new Catalog{UserId=UserId,BrandName=m.BrandName,LogoSnapshotPath=snapshot,VariantPathsJson=JsonSerializer.Serialize(raw),MainProductImagePath=main,ProductCode=m.ProductCode,MinimumAge=m.MinimumAge,MaximumAge=m.MaximumAge,AgeUnit=m.AgeUnit,ModelGender=m.ModelGender,SeriesCount=m.SeriesCount};
+ var catalog=new Catalog{UserId=UserId,BrandName=m.BrandName,LogoSnapshotPath=snapshot,VariantPathsJson=JsonSerializer.Serialize(raw),MainProductImagePath=main,ProductCode=m.ProductCode,MinimumAge=m.MinimumAge,MaximumAge=m.MaximumAge,AgeUnit=m.AgeUnit,ModelGender=m.ModelGender,HasPockets=m.HasPockets,ModelAge=m.ModelAge,ModelAgeUnit=m.ModelAgeUnit,SeriesCount=m.SeriesCount};
  await Produce(catalog,raw,200,ct);uploaded.Clear();
  return RedirectToAction("Result",new{id=catalog.Id});
  }catch(Exception e)when(e is not OutOfMemoryException){logger.LogWarning("Catalog failed: {Type}",e.GetType().Name);ModelState.AddModelError("",e is InvalidOperationException?e.Message:"Görsel oluşturulamadı. Ayrılan tokenlar iade edildi.");return View("~/Views/Home/Index.cshtml",m);}
@@ -40,7 +40,7 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  if(await tokens.Balance(UserId)<50)throw new InvalidOperationException("Yeniden üretim için 50 token gerekir.");
  string Clone(string name){var copy=Copy(name);copies.Add(copy);return copy;}
  var raw=(JsonSerializer.Deserialize<List<string>>(original.VariantPathsJson)??[]).Select(Clone).ToList();
- var catalog=new Catalog{UserId=UserId,BrandName=original.BrandName,LogoSnapshotPath=Clone(original.LogoSnapshotPath),MainProductImagePath=Clone(original.MainProductImagePath),VariantPathsJson=JsonSerializer.Serialize(raw),ProductCode=original.ProductCode,MinimumAge=original.MinimumAge,MaximumAge=original.MaximumAge,AgeUnit=original.AgeUnit,ModelGender=original.ModelGender,SeriesCount=original.SeriesCount};
+ var catalog=new Catalog{UserId=UserId,BrandName=original.BrandName,LogoSnapshotPath=Clone(original.LogoSnapshotPath),MainProductImagePath=Clone(original.MainProductImagePath),VariantPathsJson=JsonSerializer.Serialize(raw),ProductCode=original.ProductCode,MinimumAge=original.MinimumAge,MaximumAge=original.MaximumAge,AgeUnit=original.AgeUnit,ModelGender=original.ModelGender,HasPockets=original.HasPockets,ModelAge=original.ModelAge,ModelAgeUnit=original.ModelAgeUnit,SeriesCount=original.SeriesCount};
  await Produce(catalog,raw,50,ct);copies.Clear();return RedirectToAction("Result",new{id=catalog.Id});
  }catch(Exception e)when(e is not OutOfMemoryException){logger.LogWarning("Regeneration failed: {Type}",e.GetType().Name);TempData["Message"]=e is InvalidOperationException?e.Message:"Yeniden üretim tamamlanamadı. Ayrılan tokenlar iade edildi.";return RedirectToAction("Result",new{id});}
  finally{foreach(var name in copies)files.Delete(name);}
@@ -53,8 +53,8 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  async Task<string> Generate(string name,string prompt,string size){
  await gate.WaitAsync(ct);try{var output=await ai.EditAsync(name,prompt,ct,size);lock(scratch)scratch.Add(output);return output;}finally{gate.Release();}
  }
- var modelTask=Generate(catalog.MainProductImagePath,prompts.Model(catalog.Age,scene,catalog.ModelGender),"1024x1536");
- var tasks=raw.Select(name=>Generate(name,prompts.Variant(scene),"1536x768")).ToArray();
+ var modelTask=Generate(catalog.MainProductImagePath,prompts.Model(catalog.Age,scene,catalog.ModelGender,catalog.ModelAge,catalog.ModelAgeUnit,catalog.HasPockets),"1024x1536");
+ var tasks=raw.Select(name=>Generate(name,prompts.Variant(scene,catalog.HasPockets),"1536x768")).ToArray();
  await Task.WhenAll(tasks.Prepend(modelTask));
  var final=await composer.ComposeAsync(catalog.LogoSnapshotPath,await modelTask,(await Task.WhenAll(tasks)).ToList(),catalog.ProductCode,catalog.Age,ct,scene,catalog.SeriesCount);scratch.Add(final);
  catalog.GeneratedCatalogPath=final;
