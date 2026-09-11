@@ -1,0 +1,2 @@
+@model AppUser
+<h1>Kullanıcı detayı</h1><section class="panel"><h2>@Model.FullName</h2><p>@Model.Email</p><dl><dt>Rol</dt><dd>@ViewBag.Roles</dd><dt>Durum</dt><dd>@(Model.IsActive?"Aktif":"Pasif")</dd><dt>Kayıt tarihi</dt><dd>@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd><dt>Katalog sayısı</dt><dd>@ViewBag.CatalogCount</dd></dl><a href="/Admin/Users">Kullanıcılara dön</a></section>

@@ -1,0 +1,2 @@
+@model List<UserPreference>
+<h1>Markalar</h1><div class="panel table-responsive"><table class="table align-middle"><thead><tr><th>Logo</th><th>Marka</th><th>Kullanıcı</th><th>Eklenme tarihi</th></tr></thead><tbody>@foreach(var b in Model){<tr><td><img class="brand-preview" src="/Catalog/Logo?userId=@b.UserId" alt="@b.BrandName logosu"/></td><td>@b.BrandName</td><td>@b.User.Email</td><td>@b.CreatedAt.ToString("dd.MM.yyyy")</td></tr>}</tbody></table></div>
