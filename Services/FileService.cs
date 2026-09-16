@@ -14,6 +14,22 @@ public class FileService(IStoragePathService paths)
         await using var stream = file.OpenReadStream();
         try { var info = await Image.IdentifyAsync(stream, ct); if (info.Width * (long)info.Height > 24000000) throw new InvalidOperationException("Görsel en fazla 24 megapiksel olabilir."); stream.Position = 0; using var img = await Image.LoadAsync(stream, ct); img.Mutate(x => x.AutoOrient()); img.Metadata.ExifProfile = null; var path = NewPath(); await img.SaveAsPngAsync(path, ct); return Path.GetFileName(path); } catch (UnknownImageFormatException) { throw new InvalidOperationException("Dosya geçerli bir görsel değil."); }
     }
+
+    public async Task<string> SavePairAsync(IFormFile front,IFormFile back,CancellationToken ct)
+    {
+        string? a=null,b=null,result=null;
+        try {
+            a=await SaveAsync(front,ct); b=await SaveAsync(back,ct);
+            using var canvas=new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(2048,1536,Color.White);
+            foreach(var item in new[]{(a,0),(b,1024)}) {
+                using var image=Image.Load(PathFor(item.Item1));
+                image.Mutate(x=>x.Resize(new ResizeOptions{Size=new(1024,1536),Mode=ResizeMode.Max}));
+                canvas.Mutate(x=>x.DrawImage(image,new Point(item.Item2+(1024-image.Width)/2,(1536-image.Height)/2),1));
+            }
+            result=NewPath();await canvas.SaveAsPngAsync(result,ct);return Path.GetFileName(result);
+        } catch {if(result!=null)File.Delete(result);throw;}
+        finally {Delete(a);Delete(b);}
+    }
     public void DeleteCatalog(CatalogStudio.Models.Catalog c){ Delete(c.GeneratedCatalogPath); Delete(c.MainProductImagePath); Delete(c.LogoSnapshotPath); foreach(var name in System.Text.Json.JsonSerializer.Deserialize<List<string>>(c.VariantPathsJson)??[]) Delete(name); }
     public void Delete(string? name) { if (!string.IsNullOrEmpty(name)) File.Delete(PathFor(name)); }
 }
