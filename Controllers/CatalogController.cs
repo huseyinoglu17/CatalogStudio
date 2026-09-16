@@ -59,8 +59,9 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  async Task<string> Generate(string name,string prompt,string size){
  await gate.WaitAsync(ct);try{var output=await ai.EditAsync(name,prompt,ct,size);lock(scratch)scratch.Add(output);return output;}finally{gate.Release();}
  }
- var modelTask=Generate(catalog.MainProductImagePath,prompts.Model(catalog.Age,scene,catalog.ModelGender,catalog.ModelAge,catalog.ModelAgeUnit,catalog.HasPockets)+(catalog.BackPrint?PromptBuilderService.BackModel:""),"1024x1536");
- var tasks=raw.Select(name=>Generate(name,prompts.Variant(scene,catalog.HasPockets)+(catalog.BackPrint?PromptBuilderService.BackVariant:""),"1536x768")).ToArray();
+ var modelTask=Generate(catalog.MainProductImagePath,prompts.Model(catalog.Age,scene,catalog.ModelGender,catalog.ModelAge,catalog.ModelAgeUnit,catalog.HasPockets)+(catalog.BackPrint?PromptBuilderService.BackModel:"")+PromptBuilderService.PocketRule(catalog.HasPockets),"1024x1536");
+ var displayColors=catalog.BackPrint ? raw.Skip(1) : raw;
+ var tasks=displayColors.Select(name=>Generate(name,prompts.Variant(scene,catalog.HasPockets)+(catalog.BackPrint?PromptBuilderService.BackVariant:"")+PromptBuilderService.PocketRule(catalog.HasPockets),"1536x768")).ToArray();
  await Task.WhenAll(tasks.Prepend(modelTask));
  var final=await composer.ComposeAsync(catalog.LogoSnapshotPath,await modelTask,(await Task.WhenAll(tasks)).ToList(),catalog.ProductCode,catalog.Age,ct,scene,catalog.SeriesCount);scratch.Add(final);
  catalog.GeneratedCatalogPath=final;

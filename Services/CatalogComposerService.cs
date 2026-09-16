@@ -21,7 +21,7 @@ public class CatalogComposerService(FileService files,IConfiguration config) {
  canvas.Mutate(p=>p.Fill(paper,new EllipsePolygon(-20,1135,1080,520)));
  void Place(string file,int x,int y,int w,int h) {using var image=Image.Load(files.PathFor(file));image.Mutate(p=>p.Resize(new ResizeOptions{Size=new(w,h),Mode=ResizeMode.Max}));canvas.Mutate(p=>p.DrawImage(image,new Point(x+(w-image.Width)/2,y+(h-image.Height)/2),1));}
  using(var cleanLogo=LogoBackgroundService.Prepare(files.PathFor(logo))) { cleanLogo.Mutate(p=>p.Resize(new ResizeOptions{Size=new(300,125),Mode=ResizeMode.Max})); canvas.Mutate(p=>p.DrawImage(cleanLogo,new Point(24,20),1)); }
- int columns=variants.Count<=6?1:2;int rows=(int)Math.Ceiling(variants.Count/(double)columns);int width=640/columns,height=1020/rows;
+ int columns=variants.Count<=6?1:2;int rows=Math.Max(1,(int)Math.Ceiling(variants.Count/(double)columns));int width=640/columns,height=1020/rows;
  for(int i=0;i<variants.Count;i++)Place(variants[i],745+i%columns*width,35+i/columns*height,width-12,height-8);
  // Small botanical accents stay outside product cells.
  canvas.Mutate(p=>p.DrawLine(ink.WithAlpha(.35f),2,new PointF(1375,0),new PointF(1385,145)));

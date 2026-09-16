@@ -231,3 +231,6 @@ Giriş sonrası model türü seçilir. Önü baskılı seçeneği mevcut formu a
 
 ### Güncel arka baskı akışı
 Her rengin ön fotoğrafı ve yalnızca ilk rengin arka fotoğrafı istenir (4 renk = toplam 5 ürün fotoğrafı). İlk rengin ön/arka referansı manken üretiminde kullanılır. Sol panelde eşit büyüklükte yan yana iki tam boy manken: biri önden, diğeri arkadan görünür; küçük arka görünüş eki kullanılmaz. Sağ panel renklerin ön görünüşlerini gösterir. Eski iki panelli renk referanslarıyla yeniden üretim de desteklenir. 87 kontrol geçti, gerçek AI görseli bu değişiklikte üretilmedi.
+
+### Cep ve renk tekrarı düzeltmesi
+Cepsiz tercihi, referanstaki cep ve dikiş koruma talimatlarının önüne geçer; üst/alt parçaların ön, yan ve arka ceplerinin kaldırılması ve ellerin cepler dışında görünmesi istenir. Bu bir üretim talimatıdır; otomatik görsel doğrulama garantisi değildir. Arkası baskılı kataloglarda ilk renk yalnızca mankenlerde gösterilir, sağdaki ürün üretimi ikinci renkten başlar. Tek renk için boş ürün listesi desteklenir. 90 kontrol geçti.
