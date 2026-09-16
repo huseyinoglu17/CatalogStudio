@@ -23,8 +23,8 @@ public class CatalogController(AppDbContext db,FileService files,UserPreferenceS
  var logo=m.UseSavedLogo?pref!.LogoPath:await files.SaveAsync(m.Logo!,ct);if(!m.UseSavedLogo)uploaded.Add(logo);
  var raw=new List<string>(); string main;
  if(m.BackPrint){
- for(int i=0;i<m.ColorCount!.Value;i++){var pair=await files.SavePairAsync(m.FrontImages[i],m.BackImages[i],ct);raw.Add(pair);uploaded.Add(pair);}
- main=Copy(raw[0]);uploaded.Add(main);
+ foreach(var front in m.FrontImages){var name=await files.SaveAsync(front,ct);raw.Add(name);uploaded.Add(name);}
+ main=await files.SavePairAsync(m.FrontImages[0],m.BackImages[0],ct);uploaded.Add(main);
  }else{
  main=await files.SaveAsync(m.MainModelProductImage!,ct);uploaded.Add(main);
  foreach(var file in m.VariantImages){var name=await files.SaveAsync(file,ct);raw.Add(name);uploaded.Add(name);}

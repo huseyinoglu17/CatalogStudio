@@ -35,7 +35,7 @@ public class CatalogRequest : IValidatableObject
         if (AgeUnit == AgeUnit.Years && MaximumAge > 18) yield return new("Çocuk yaşı en fazla 18 olabilir.", [nameof(MaximumAge)]);
         if (BackPrint) {
             if (ColorCount is null or < 1 or > 10) yield return new("1-10 arasında renk sayısı girin.", [nameof(ColorCount)]);
-            if (FrontImages.Count != ColorCount || BackImages.Count != ColorCount) yield return new("Her renk için bir ön ve bir arka fotoğraf yükleyin.", [nameof(FrontImages)]);
+            if (FrontImages.Count != ColorCount || BackImages.Count != 1) yield return new("Her renk için ön fotoğraf ve yalnızca ilk renk için bir arka fotoğraf yükleyin.", [nameof(FrontImages)]);
         } else if (MainModelProductImage == null) yield return new("Mankene giydirilecek ürün fotoğrafı zorunludur.", [nameof(MainModelProductImage)]);
         if (!BackPrint && VariantImages.Count is < 1 or > 10) yield return new("1-10 renk fotoğrafı yükleyin.", [nameof(VariantImages)]);
     }
