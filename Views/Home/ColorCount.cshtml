@@ -1,1 +1,16 @@
-<section class="panel"><h1>Kaç renk var?</h1><p>İlk renk mankenin giyeceği renk olacak. Yalnızca ilk renk için ön ve arka fotoğraf, diğer renkler için ön fotoğraf istenecek.</p><form method="get" action="/"><input type="hidden" name="mode" value="back"/><label for="color-count">Renk sayısı</label><input id="color-count" name="count" class="form-control" type="number" inputmode="numeric" min="1" max="10" required placeholder="Örn. 4"/><button class="btn btn-primary mt-3">Fotoğraflara devam et</button><a class="btn btn-outline-dark mt-3" href="/">Geri</a></form></section>
+@{ ViewData["Title"] = "Renk sayısı"; var mode = ViewBag.CatalogMode as string ?? "front"; }
+<section class="panel color-count-panel">
+    <p class="eyebrow">@(mode == "back" ? "ARKASI BASKILI MODEL" : "ÖNÜ BASKILI MODEL")</p>
+    <h1>Kaç renk var?</h1>
+    <p>Toplam renk sayısını gir. İlk renk ana katalogdaki mankenin giyeceği renk olacak.</p>
+    @if (mode == "back") { <p>İlk renk için ön ve arka fotoğraf, diğer renkler için yalnızca ön fotoğraf istenecek.</p> }
+    else { <p>İlk renk için ürün fotoğrafı, ardından diğer renklerin fotoğrafları istenecek.</p> }
+    <p>Her renk için ayrıca beyaz fonda, marka ve ürün kodu olmadan mankenli fotoğraf hazırlanır.</p>
+    <form method="get" action="/" id="color-count-form">
+        <input type="hidden" name="mode" value="@mode"/>
+        <label for="color-count">Toplam renk sayısı</label>
+        <input id="color-count" name="count" class="form-control" type="number" inputmode="numeric" min="1" max="10" required placeholder="Örn. 4" aria-describedby="color-cost"/>
+        <p class="upload-help" id="color-cost" aria-live="polite">Renk başına 75 token · Yeniden üretim sabit 25 token</p>
+        <div class="step-actions"><button class="btn btn-primary">Fotoğraflara devam et</button><a class="btn btn-outline-dark" href="/">Geri</a></div>
+    </form>
+</section>

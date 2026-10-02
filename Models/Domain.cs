@@ -7,7 +7,7 @@ public enum AgeUnit { Months, Years }
 public record AgeRange(int MinimumAge, int MaximumAge, AgeUnit AgeUnit) { public override string ToString() => $"{MinimumAge}-{MaximumAge} {(AgeUnit == AgeUnit.Months ? "months" : "years")}"; }
 public class AppUser : IdentityUser<int> { public string? FullName { get; set; } public DateTime CreatedAt { get; set; } = DateTime.UtcNow; public bool IsActive { get; set; } = true; }
 public class UserPreference { public int Id { get; set; } public int UserId { get; set; } public AppUser User { get; set; } = null!; [MaxLength(100)] public string BrandName { get; set; } = ""; public string LogoPath { get; set; } = ""; public DateTime CreatedAt { get; set; } = DateTime.UtcNow; public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; }
-public class Catalog { public bool BackPrint {get;set;} public bool? HasPockets {get;set;} public int? ModelAge {get;set;} public AgeUnit? ModelAgeUnit {get;set;} public string BrandName {get;set;}=""; public string LogoSnapshotPath {get;set;}=""; public string VariantPathsJson {get;set;}="[]"; public ModelGender? ModelGender { get; set; } public int? SeriesCount { get; set; } public int Id { get; set; } public int UserId { get; set; } public AppUser User { get; set; } = null!; public int ProductCode { get; set; } public int MinimumAge { get; set; } public int MaximumAge { get; set; } public AgeUnit AgeUnit { get; set; } public string MainProductImagePath { get; set; } = ""; public string GeneratedCatalogPath { get; set; } = ""; public DateTime CreatedAt { get; set; } = DateTime.UtcNow; public AgeRange Age => new(MinimumAge, MaximumAge, AgeUnit); }
+public class Catalog { public int OutputWidth {get;set;}=1400; public int OutputHeight {get;set;}=1100; public string WhiteModelPathsJson {get;set;}="[]"; public bool BackPrint {get;set;} public bool? HasPockets {get;set;} public int? ModelAge {get;set;} public AgeUnit? ModelAgeUnit {get;set;} public string BrandName {get;set;}=""; public string LogoSnapshotPath {get;set;}=""; public string VariantPathsJson {get;set;}="[]"; public ModelGender? ModelGender { get; set; } public int? SeriesCount { get; set; } public int Id { get; set; } public int UserId { get; set; } public AppUser User { get; set; } = null!; public int ProductCode { get; set; } public int MinimumAge { get; set; } public int MaximumAge { get; set; } public AgeUnit AgeUnit { get; set; } public string MainProductImagePath { get; set; } = ""; public string GeneratedCatalogPath { get; set; } = ""; public DateTime CreatedAt { get; set; } = DateTime.UtcNow; public AgeRange Age => new(MinimumAge, MaximumAge, AgeUnit); }
 public class CatalogRequest : IValidatableObject
 {
     [Required(ErrorMessage = "Marka adı zorunludur."), StringLength(100)] public string BrandName { get; set; } = "";
@@ -18,6 +18,9 @@ public class CatalogRequest : IValidatableObject
     [Required, EnumDataType(typeof(AgeUnit))] public AgeUnit? ModelAgeUnit {get;set;}
     public bool BackPrint {get;set;}
     public int? ColorCount {get;set;}
+    public bool CustomSize {get;set;}
+    public int? OutputWidth {get;set;}
+    public int? OutputHeight {get;set;}
     public List<IFormFile> FrontImages {get;set;} = [];
     public List<IFormFile> BackImages {get;set;} = [];
     public IFormFile? Logo { get; set; }
@@ -33,10 +36,12 @@ public class CatalogRequest : IValidatableObject
         if (ModelAgeUnit == CatalogStudio.Models.AgeUnit.Years && ModelAge > 18) yield return new("Manken yaşı en fazla 18 olabilir.", [nameof(ModelAge)]);
         if (MinimumAge > MaximumAge) yield return new("Minimum yaş maksimum yaştan büyük olamaz.", [nameof(MinimumAge)]);
         if (AgeUnit == AgeUnit.Years && MaximumAge > 18) yield return new("Çocuk yaşı en fazla 18 olabilir.", [nameof(MaximumAge)]);
+        if (ColorCount is null or < 1 or > 10) yield return new("1-10 arasında toplam renk sayısı girin.", [nameof(ColorCount)]);
+        if (CustomSize && (OutputWidth is null or < 256 or > 4096 || OutputHeight is null or < 256 or > 4096)) yield return new("Özel boyutta genişlik ve yüksekliği 256-4096 piksel arasında girin.", [nameof(OutputWidth),nameof(OutputHeight)]);
         if (BackPrint) {
-            if (ColorCount is null or < 1 or > 10) yield return new("1-10 arasında renk sayısı girin.", [nameof(ColorCount)]);
+
             if (FrontImages.Count != ColorCount || BackImages.Count != 1) yield return new("Her renk için ön fotoğraf ve yalnızca ilk renk için bir arka fotoğraf yükleyin.", [nameof(FrontImages)]);
         } else if (MainModelProductImage == null) yield return new("Mankene giydirilecek ürün fotoğrafı zorunludur.", [nameof(MainModelProductImage)]);
-        if (!BackPrint && VariantImages.Count is < 1 or > 10) yield return new("1-10 renk fotoğrafı yükleyin.", [nameof(VariantImages)]);
+        if (!BackPrint && (VariantImages.Count > 9 || VariantImages.Count != ColorCount - 1)) yield return new("İlk renk dışında kalan her renk için bir fotoğraf yükleyin; tek renk için başka fotoğraf gerekmez.", [nameof(VariantImages)]);
     }
 }

@@ -2,14 +2,17 @@ document.querySelectorAll('.drop-zone').forEach(zone=>{
  const input=zone.querySelector('input[type=file]'),preview=zone.querySelector('.previews');let urls=[];
  function render(){
  urls.forEach(URL.revokeObjectURL);urls=[];preview.replaceChildren();input.setCustomValidity('');
- if(input.files.length>(input.multiple?10:1)){input.setCustomValidity('En fazla '+(input.multiple?'10':'1')+' fotoğraf seçin.');input.reportValidity();return;}
+ const maxCount=Number(input.dataset.maxCount)||(input.multiple?9:1),exactCount=Number(input.dataset.exactCount);
+ if(input.files.length>maxCount){input.setCustomValidity('En fazla '+maxCount+' fotoğraf seçin.');}
  Array.from(input.files).forEach((file,index)=>{
- if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024){input.setCustomValidity('PNG, JPEG veya WebP; en fazla 10 MB.');input.reportValidity();return;}
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024){input.setCustomValidity('PNG, JPEG veya WebP; en fazla 10 MB.');return;}
  const item=document.createElement('div');item.className='preview-item';
  const img=document.createElement('img');img.alt=file.name;img.src=URL.createObjectURL(file);urls.push(img.src);item.append(img);
  const remove=document.createElement('button');remove.type='button';remove.className='preview-remove';remove.textContent='×';remove.setAttribute('aria-label',file.name+' fotoğrafını kaldır');
  remove.addEventListener('click',()=>{const dt=new DataTransfer();Array.from(input.files).forEach((f,i)=>{if(i!==index)dt.items.add(f)});input.files=dt.files;render();input.focus();});item.append(remove);preview.append(item);
  });
+ if(!input.validationMessage&&exactCount&&input.files.length!==exactCount)input.setCustomValidity(exactCount+' renk için tam olarak '+exactCount+' fotoğraf seçin.');
+ if(input.validationMessage)input.reportValidity();
  }
  input.addEventListener('change',render);
  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragging')});
@@ -19,11 +22,31 @@ document.querySelectorAll('.drop-zone').forEach(zone=>{
 function syncLogo(){const input=document.getElementById('Logo'),section=document.getElementById('logo-upload');if(!input||!section)return;const use=document.querySelector('[name=UseSavedLogo]:checked')?.value==='true';section.hidden=use;input.required=!use;}
 document.querySelectorAll('[name=UseSavedLogo]').forEach(r=>r.addEventListener('change',syncLogo));syncLogo();
 const form=document.getElementById('catalog-form');
-if(form){const min=document.getElementById('MinimumAge'),max=document.getElementById('MaximumAge'),unit=document.getElementById('AgeUnit');function age(){max.max=unit.value==='Years'?18:216;min.max=max.max;max.setCustomValidity(+min.value>+max.value?'Minimum yaş maksimum yaştan büyük olamaz.':'');document.getElementById('age-preview').textContent='Bu aralık katalogda ürün beden bilgisi olarak gösterilir.';}[min,max,unit].forEach(x=>x.addEventListener('input',age));age();form.addEventListener('submit',()=>{document.getElementById('generate').disabled=true;document.getElementById('generate').textContent='Katalog hazırlanıyor…';document.getElementById('progress').hidden=false;});}
+function syncCreationPrice(){
+ const count=document.getElementById('ColorCount'),button=document.getElementById('generate'),price=document.getElementById('creation-cost');
+ if(!count||!button||!price)return;
+ const cost=Math.max(1,Math.min(10,Number(count.value)||1))*75;
+ price.textContent=cost+' token';button.dataset.idleLabel='Kataloğu oluştur · '+cost+' token';
+ if(!button.disabled)button.textContent=button.dataset.idleLabel;
+}
+function syncOutputSize(){
+ const fields=document.getElementById('custom-size-fields'),width=document.getElementById('OutputWidth'),height=document.getElementById('OutputHeight'),preview=document.getElementById('format-preview');
+ if(!fields||!width||!height)return;
+ const custom=document.querySelector('[name=CustomSize]:checked')?.value==='true';
+ fields.hidden=!custom;[width,height].forEach(input=>{input.required=custom;input.disabled=!custom;});
+ if(preview)preview.textContent=custom?(width.value&&height.value?width.value+' × '+height.value:'Özel boyut'):'1400 × 1100';
+}
+document.querySelectorAll('[name=CustomSize]').forEach(input=>input.addEventListener('change',syncOutputSize));
+['OutputWidth','OutputHeight'].forEach(id=>document.getElementById(id)?.addEventListener('input',syncOutputSize));
+syncOutputSize();syncCreationPrice();
+if(form){const min=document.getElementById('MinimumAge'),max=document.getElementById('MaximumAge'),unit=document.getElementById('AgeUnit');function age(){max.max=unit.value==='Years'?18:216;min.max=max.max;max.setCustomValidity(+min.value>+max.value?'Minimum yaş maksimum yaştan büyük olamaz.':'');document.getElementById('age-preview').textContent='Bu aralık katalogda ürün beden bilgisi olarak gösterilir.';}[min,max,unit].forEach(x=>x.addEventListener('input',age));age();form.addEventListener('submit',()=>{document.getElementById('generate').disabled=true;document.getElementById('generate').textContent='Fotoğraflar hazırlanıyor…';document.getElementById('progress').hidden=false;});}
+
+const colorCount=document.getElementById('color-count'),colorCost=document.getElementById('color-cost');
+if(colorCount&&colorCost){const showColorPrice=()=>{const count=Number(colorCount.value);colorCost.textContent=Number.isInteger(count)&&count>=1&&count<=10?count+' renk × 75 token = '+(count*75)+' token · Yeniden üretim 25 token':'Renk başına 75 token · Yeniden üretim sabit 25 token';};colorCount.addEventListener('input',showColorPrice);showColorPrice();}
 document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault();}));
 document.querySelectorAll('form[data-generation]').forEach(form=>form.addEventListener('submit',event=>{if(event.defaultPrevented)return;const button=form.querySelector('button');if(button){button.disabled=true;button.textContent='Yeniden oluşturuluyor…';}}));
 document.addEventListener('click',event=>{document.querySelectorAll('.account-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;});});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.account-menu[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
-window.addEventListener('pageshow',event=>{if(event.persisted){const button=document.getElementById('generate');if(button){button.disabled=false;button.textContent='Kataloğu oluştur · 200 token';document.getElementById('progress').hidden=true;}document.querySelectorAll('form[data-generation] button').forEach(b=>{b.disabled=false;b.textContent='Yeniden oluştur · 50 token';});}});
+window.addEventListener('pageshow',event=>{if(event.persisted){const button=document.getElementById('generate');if(button){button.disabled=false;button.textContent=button.dataset.idleLabel;document.getElementById('progress').hidden=true;}document.querySelectorAll('form[data-generation] button').forEach(b=>{b.disabled=false;b.textContent=b.dataset.idleLabel||'Yeniden oluştur · 25 token';});}syncCreationPrice();syncOutputSize();});
 
 const modelAge=document.getElementById('ModelAge'), modelAgeUnit=document.getElementById('ModelAgeUnit'); if(modelAge && modelAgeUnit){const updateModelAge=()=>{modelAge.max=modelAgeUnit.value==='Years'?'18':'216';}; modelAgeUnit.addEventListener('change',updateModelAge); updateModelAge();}

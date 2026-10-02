@@ -11,6 +11,7 @@ public class CatalogRetentionService(AppDbContext db, FileService files, ILogger
     static IEnumerable<string> Names(Catalog c) =>
         new[] { c.GeneratedCatalogPath, c.MainProductImagePath, c.LogoSnapshotPath }
         .Concat(JsonSerializer.Deserialize<List<string>>(c.VariantPathsJson) ?? [])
+        .Concat(JsonSerializer.Deserialize<List<string>>(c.WhiteModelPathsJson) ?? [])
         .Where(x => !string.IsNullOrWhiteSpace(x));
 
     public async Task Cleanup()

@@ -1,8 +1,48 @@
 @model Catalog
-@{ViewData["Title"]="Katalog hazır";}
+@{
+    ViewData["Title"] = "Katalog hazır";
+    var whiteImageCount = 0;
+    try { whiteImageCount = System.Text.Json.JsonSerializer.Deserialize<string[]>(Model.WhiteModelPathsJson ?? "[]")?.Length ?? 0; }
+    catch (System.Text.Json.JsonException) { }
+}
 <a class="back-link" href="/Catalog/MyCatalogs">← Kataloglarım</a>
-<div class="page-heading"><div><p class="eyebrow">KATALOG HAZIR</p><h1>#@Model.ProductCode</h1><div class="catalog-tags"><span>@Model.Age</span>@if(Model.SeriesCount.HasValue){<span>@Model.SeriesCount pieces</span>}</div></div><a class="btn btn-primary" href="/Catalog/Image/@Model.Id?download=true">PNG olarak indir</a></div>
-<div class="result-grid"><div><a class="result-image-link" href="/Catalog/Image/@Model.Id" target="_blank" rel="noopener" aria-label="Kataloğu tam boy aç"><img class="final-catalog" src="/Catalog/Image/@Model.Id" alt="@Model.ProductCode ürün kataloğu" width="1400" height="1100"/></a><p class="upload-help">Detayları görmek için görsele dokun. Yayınlamadan önce ürünün renk ve baskılarını kontrol et.</p></div>
-<aside><section class="panel"><h2>Farklı bir çekim dene</h2>
-@if(!string.IsNullOrEmpty(Model.LogoSnapshotPath)&&Model.VariantPathsJson!="[]"){<p>Aynı ürünler, logo ve bilgilerle yeni bir arka planda tekrar oluştur.</p><form asp-action="Regenerate" method="post" data-generation="true" data-confirm="Yeniden üretim 50 token harcar. Devam edilsin mi?"><input type="hidden" name="id" value="@Model.Id"/><button class="btn btn-primary w-100">Yeniden oluştur · 50 token</button></form><p class="upload-help">Sonuç ayrı bir katalog olarak kaydedilir.</p>}else{<p>Bu eski kataloğun kaynak fotoğrafları saklanmamış. Tekrar oluşturmak için yeni katalog formuna yükleyebilirsin.</p><a class="btn btn-outline-dark w-100" href="/">Yeni katalog</a>}</section>
-<section class="panel delete-panel"><h2>Kataloğu sil</h2><p>Bu katalog ve görseli kalıcı olarak kaldırılır.</p><form asp-controller="Catalog" asp-action="Delete" method="post" data-confirm="Bu katalog ve görseli kalıcı olarak silinsin mi?"><input type="hidden" name="id" value="@Model.Id"/><button class="btn btn-delete w-100">Kataloğu sil</button></form></section></aside></div>
+<div class="page-heading">
+    <div><p class="eyebrow">KATALOG HAZIR</p><h1>#@Model.ProductCode</h1><div class="catalog-tags"><span>@Model.Age</span>@if(Model.SeriesCount.HasValue){<span>@Model.SeriesCount pieces</span>}<span>@Model.OutputWidth × @Model.OutputHeight piksel</span></div></div>
+    <a class="btn btn-primary" href="/Catalog/Image/@Model.Id?download=true">@(whiteImageCount == 1 ? "Markalı fotoğrafı indir" : "Kataloğu indir")</a>
+</div>
+<div class="result-grid">
+    <div>
+        <a class="result-image-link" href="/Catalog/Image/@Model.Id" target="_blank" rel="noopener" aria-label="Kataloğu tam boy aç"><img class="final-catalog" src="/Catalog/Image/@Model.Id" alt="@Model.ProductCode ürün kataloğu" width="@Model.OutputWidth" height="@Model.OutputHeight"/></a>
+        <p class="upload-help">Detayları görmek için görsele dokun. Yayınlamadan önce ürünün renk ve baskılarını kontrol et.</p>
+        @if (whiteImageCount > 0)
+        {
+            <section class="white-photos-section" aria-labelledby="white-photos-title">
+                <div class="section-heading"><h2 id="white-photos-title">Beyaz fonlu manken fotoğrafları</h2><p>Her renk ayrı fotoğraf · Marka ve ürün kodu olmadan</p></div>
+                <div class="white-photo-grid">
+                    @for(var i=0;i<whiteImageCount;i++)
+                    {
+                        <article class="white-photo-card">
+                            <a href="/Catalog/WhiteImage/@Model.Id?index=@i" target="_blank" rel="noopener" aria-label="@(i+1). rengin beyaz fonlu fotoğrafını tam boy aç"><img src="/Catalog/WhiteImage/@Model.Id?index=@i" alt="@(i+1). rengin beyaz fonda mankenli fotoğrafı" width="@Model.OutputWidth" height="@Model.OutputHeight" loading="lazy"/></a>
+                            <div class="white-photo-info"><h3>@(i+1). renk</h3><a class="btn btn-outline-dark" href="/Catalog/WhiteImage/@Model.Id?index=@i&download=true">PNG indir</a></div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+    <aside>
+        <section class="panel"><h2>Farklı bir çekim dene</h2>
+            @if(!string.IsNullOrEmpty(Model.LogoSnapshotPath)&&!string.IsNullOrEmpty(Model.MainProductImagePath))
+            {
+                <p>Aynı ürünler, logo, bilgiler ve fotoğraf boyutuyla yeni bir arka planda tekrar oluştur. Beyaz fonlu fotoğraflar da yeniden hazırlanır.</p>
+                <form asp-action="Regenerate" method="post" data-generation="true" data-confirm="Yeniden üretim sabit 25 token harcar. Yeni katalog hazır olduğunda bu katalog ve fotoğrafları silinir. Devam edilsin mi?"><input type="hidden" name="id" value="@Model.Id"/><button class="btn btn-primary w-100" data-idle-label="Yeniden oluştur · 25 token">Yeniden oluştur · 25 token</button></form>
+                <p class="upload-help">Saklamak istediğin fotoğrafları yeniden üretimden önce indir.</p>
+            }
+            else
+            {
+                <p>Bu eski kataloğun kaynak fotoğrafları saklanmamış. Tekrar oluşturmak için yeni katalog formuna yükleyebilirsin.</p><a class="btn btn-outline-dark w-100" href="/">Yeni katalog</a>
+            }
+        </section>
+        <section class="panel delete-panel"><h2>Kataloğu sil</h2><p>Bu katalog ve ona ait tüm fotoğraflar kalıcı olarak kaldırılır.</p><form asp-controller="Catalog" asp-action="Delete" method="post" data-confirm="Bu katalog ve ona ait tüm fotoğraflar kalıcı olarak silinsin mi?"><input type="hidden" name="id" value="@Model.Id"/><button class="btn btn-delete w-100">Kataloğu sil</button></form></section>
+    </aside>
+</div>

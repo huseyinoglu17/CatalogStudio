@@ -45,7 +45,7 @@ Production admin değişkenleri eksikse warning yazılır, uygulama ve health ç
 
 Production forwarded headers ayarı Railway proxy'sine güvenir; container'a doğrudan genel ağ erişimi açmayın. Identity cookie Secure, HttpOnly ve SameSite=Lax kullanır. HTTPS yönlendirmesi öncesinde forwarded headers işlenir; health HTTP üzerinden de çalışır. İsteğe bağlı `AllowedHosts` kısıtlamasına kendi domainlerinizin yanında `healthcheck.railway.app` ekleyin (noktalı virgülle ayrılır). Varsayılan değer Railway domain oluşturma akışı için `*` şeklindedir.
 
-Upload toplam sınırı 125 MB; her görsel 10 MB ve 24 megapiksel ile sınırlıdır. MIME, uzantı ve görsel decode kontrolü yapılır. Production logları console üzerinden izlenir; secret, parola ve cookie değerleri uygulama loglarına yazılmaz.
+Upload toplam sınırı 215 MB; her görsel 10 MB ve 24 megapiksel ile sınırlıdır. MIME, uzantı ve görsel decode kontrolü yapılır. Production logları console üzerinden izlenir; secret, parola ve cookie değerleri uygulama loglarına yazılmaz.
 
 ### Custom domain
 
@@ -113,9 +113,9 @@ dotnet run --launch-profile http --urls http://localhost:5187
 1. Hesap oluşturun; ardından giriş yapın.
 2. Marka adı ve logo girin. Daha önce logo yüklediyseniz her yeni katalogda tekrar kullanmayı açıkça seçin veya yeni logo yükleyin.
 3. Pozitif tam sayı ürün kodunu ve yaş aralığını girin.
-4. Mankene giydirilecek ürün için bir fotoğraf, diğer renkler için 1–10 fotoğraf seçin.
-5. Kataloğu oluşturun. Üretim tamamlanana kadar sayfayı açık tutun.
-6. 1400 × 1100 PNG sonucunu indirin; önceki sonuçları Kataloglarım ekranında bulun.
+4. Model türünü ve toplam renk sayısını (1–10) seçin; istenen ürün fotoğraflarını yükleyin.
+5. Standart veya özel fotoğraf boyutunu seçip üretimi başlatın. Tamamlanana kadar sayfayı açık tutun.
+6. Sonuç ekranından markalı kataloğu ve her rengin ayrı beyaz fonlu PNG fotoğrafını indirin. Yalnızca son katalog paketi saklanır.
 
 PNG, JPEG ve WebP; dosya başına 10 MB, görsel başına 24 megapiksel sınırı uygulanır. Görseller sunucuda yeniden PNG olarak kodlanır; EXIF kaldırılır. Tarayıcı önizlemeleri ve sürükle-bırak desteklenir. Hatalı gönderimden sonra dosyaları tekrar seçmek gerekir.
 
@@ -123,13 +123,13 @@ PNG, JPEG ve WebP; dosya başına 10 MB, görsel başına 24 megapiksel sınır�
 
 - Ayrı metin analizi yoktur; ürün fotoğrafı doğrudan görsel düzenleme isteğine gönderilir.
 - Referansla görsel düzenleme: istenen `gpt-image-2`, Images Edits API.
-- Model adları `OpenAI:VisionModel` ve `OpenAI:ImageModel` ayarlarıyla değiştirilebilir.
+- Görsel modeli OpenAI:ImageModel ayarıyla değiştirilebilir; mevcut model gpt-image-2 olarak korunmuştur.
 - GPT Image 2 için `input_fidelity` gönderilmez; `output_format=png`, `size=1024x1536`, `quality=medium` kullanılır.
 - Her ana/renk görseli kendi referans fotoğrafıyla doğrudan düzenlenir. Logo AI'a gönderilmez.
 - Final canvas, gerçek logo, kod ve İngilizce yaş metni C# / ImageSharp ile birleştirilir.
 - Her API isteğinin 5 dakika zaman aşımı vardır; iptal belirteci aktarılır. Yalnızca açık 429 cevapları en fazla iki kez yeniden denenir. Belirsiz hatalarda çift ücret riskini önlemek için otomatik üretim tekrarı yapılmaz.
 - Başarısız işlemin dosyaları ve başarılı işlemin ara görselleri temizlenir; orijinal ana ürün, son PNG ve kayıtlı logo tutulur.
-- 10 renkli bir katalog 11 düzenleme isteği içerir; ücret ve bekleme süresi buna göre artar.
+- N renk için N ana/ürün düzenlemesi ve N beyaz model düzenlemesi, toplam 2N AI isteği yapılır. En fazla üç istek paralel çalışır.
 - AI ürün ayrıntılarını değiştirebilir. Yayın öncesinde renk, baskı, kesim ve dikişleri orijinal ürünle karşılaştırın. Piksel düzeyinde aynı ürün garantisi verilmez.
 
 Resmî kaynaklar (10 Eylül 2026):
@@ -168,7 +168,7 @@ Production'da admin ortam değişkenleri yoksa varsayılan hesap oluşturulmaz v
 
 Varsayılan SQLite: `App_Data/catalog.db`.
 Özel dosyalar: `App_Data/files/`.
-Bağlantı değişkeni: `ConnectionStrings__Default`.
+Bağlantı değişkeni: ConnectionStrings__DefaultConnection; eski ConnectionStrings__Default da desteklenir.
 Dosya deposu değişkeni: `Storage__Root`.
 
 Dosyalar wwwroot dışında tutulur; yalnızca yetkili controller üzerinden sunulur. Normal kullanıcı başka kullanıcının kayıtlarına, katalog PNG'sine veya logosuna ulaşamaz. Admin yönetim yetkisiyle logo ve katalogları görüntüler. Değişiklik yapan POST işlemlerinde global anti-forgery doğrulaması vardır. Veritabanı ve özel dosyaları birlikte yedekleyin.
@@ -189,48 +189,39 @@ wwwroot/                  Yerel Bootstrap, CSS, JavaScript
 App_Data/                 Yerel veritabanı ve özel dosyalar (pakete dahil edilmez)
 ```
 
+
+## Çıktılar, boyut ve fiyatlandırma
+
+Önü veya arkası baskılı model türünü seçtikten sonra toplam renk sayısı (1–10) sorulur. İlk/manekenin giyeceği renk bu sayıya dahildir. Önü baskılı akışta ilk renk için ana ürün fotoğrafı, kalan renklerin her biri için bir fotoğraf yüklenir. Tek renk için başka renk fotoğrafı gerekmez. Arkası baskılı akışta her rengin ön fotoğrafı ve yalnızca ilk rengin arka fotoğrafı yüklenir.
+
+- Birden fazla renk: markalı ve ürün kodlu toplu katalog + her renk için ayrı beyaz fonlu manken fotoğrafı.
+- Tek renk: güzel arka planlı, markalı ve ürün kodlu tam alan manken fotoğrafı + beyaz fonda marka/kod eklenmeyen tek manken fotoğrafı.
+- Arkası baskılı ana katalogda iki manken önden/arkadan görünür. İlk renk sağdaki ürünlerde tekrarlanmaz. Ayrı beyaz fonlu fotoğraflar renklerin önden mankenli görünüşlerini gösterir.
+- Standart boyut tüm çıktılar için 1400 × 1100 pikseldir. Özel boyutta genişlik/yükseklik ayrı girilir: her biri 256–4096 piksel. Çıktılar PNG olarak tam bu ölçülerde hazırlanır; oran bozulmaması için gerektiğinde düz fonla boşluk eklenir. Bu ayar nihai dosya boyutudur, AI'ın yerel üretim çözünürlüğünü artırmaz.
+- Yeni üretim: toplam renk sayısı × 75 token. Örnek: 1 renk 75, 4 renk 300, 10 renk 750 token.
+- Yeniden üretim: renk sayısından bağımsız sabit 25 token; ana katalog ve tüm beyaz fonlu görseller yeniden hazırlanır, aynı ölçüler korunur.
+- Sonuç ekranında tüm fotoğraflar ayrı önizlenir ve indirilir. WhiteImage endpointi yalnızca sahibi veya Admin için açıktır.
+
+Başlangıç bakiyesi 200 token, adminin kullanıcı adı/e-posta ile token ekleme/çıkarma/ayarlama işlevleri korunur. Krediler uygulama içi birimlerdir; OpenAI API token ücretlerinden bağımsızdır. Kesinti koşullu atomik SQL güncellemesiyle yapılır. Katalog ve tüm beyaz çıktılar başarıyla kaydedilmeden işlem tamamlanmış sayılmaz. Başarısız üretimde rezervasyon bir kez iade edilir; önceki katalog korunur.
+
+## Katalog saklama ve temizleme
+
+Her kullanıcı için yalnızca son başarılı katalog paketi tutulur. Yeni üretim veya yeniden üretim tamamlandığında önceki ana çıktı, beyaz fonlu fotoğraflar ve kaynak görseller silinir. Kayıtlı marka logosu korunur. Startup sırasında da birikmiş eski kataloglar temizlenir. Katalog silmek token iadesi yapmaz. Yedekler bu temizlikten bağımsızdır.
+
+Ana fotoğraf, renk kaynakları, logo kopyası, marka/cep/cinsiyet/yaş/seri ve nihai ölçüler tekrar üretim için saklanır. Eski kataloglarda beyaz çıktı listesi boş, boyut 1400 × 1100 olarak migrate edilir; tekrar üretim yeni çıktıları oluşturur. Kaynakları geçmişte silinmiş kataloglar tekrar üretilemez.
+
+Tek instance kullanın. Startup'ta Pending rezervasyonlar iade edilir; çok sunuculu iş sahipliği ve kalıcı iş kuyruğu bu sürümde yoktur. İşlem sırasında süreç zorla kapatılırsa dosya bakımı gerekebilir.
+
+## Görsel kuralları ve mobil arayüz
+
+Cepsiz seçimi referanstaki cep koruma talimatının önüne geçer; ön/yan/arka ceplerin kaldırılması ve ellerin görünür olması istenir. Tek parça ürün sade beyaz tamamlayıcı kıyafetle giydirilir. Logo AI'a gönderilmez; katalog kompozisyonunda arka planı yerel olarak kaldırılır. Beyaz model fotoğrafında ek logo, ürün kodu, yaş, seri metni ve dekor bulunmaz; ürünün orijinal baskısı korunur.
+
+Telefonda sabit alt menü, üstte bakiye, büyük form alanları ve ayrı fotoğraf indirme kartları vardır. 390 piksel mobil ve 1440 piksel masaüstünde yeni formlar incelendi; özel boyut alanları ve renk ücretleri kontrol edildi.
+
 ## Doğrulama
 
-`dotnet build`: 0 hata, 0 uyarı. Migration uygulandı; Development sunucusu 5187 portunda başlatıldı.
+Release build 0 hata / 0 uyarı ile başarılı. 127 entegrasyon kontrolü geçti: üyelik, admin, yetkiler, logo, renk başına ücret, sabit yeniden üretim, tek renk ön/arka akış, her rengin beyaz çıktısı, boyutlar, yetkili indirme, başarısız üretimde iade ve dosya temizliği, kalıcı cookie ve production health.
 
-63 otomatik HTTP/servis kontrolü geçti: seed admin girişi, admin ekranları, kayıt/giriş, User için Admin engeli, CSRF, negatif/kesirli kod, kayıtlı logo tercihi, kullanıcılar arası sonuç/PNG/logo izolasyonu, şifre hash'i, 1 ve 10 renkli katalog kaydı, PNG boyutu ve indirme, 11 renk reddi, yaş hesapları, adminin kendini koruması, pasifleştirme/yeniden aktifleştirme ve katalog silme.
+Verification/Run-SmokeTests.ps1, console test projesini kendi work klasöründe oluşturur. Testler MVC, Identity, SQLite, ImageSharp ve gerçek API istemcisi üzerinden çalışır; yalnızca OpenAI HTTP yanıtları taklit edilir. Ücretli gerçek görsel üretimi bu güncellemede yapılmadı; beyaz fon, ürün benzerliği ve cep kuralının görsel doğruluğu gerçek örneklerle ayrıca değerlendirilmelidir.
 
-Bu testler gerçek MVC + Identity + SQLite + ImageSharp + OpenAiImageService üzerinden çalışır; **yalnızca OpenAI HTTP yanıtları sahte test yanıtlarıdır**. Gerçek API ile fotoğraf üretimi ve ürün benzerliği doğrulanmadı. Test sunucusu Kestrel upload sınırlarını taklit etmez; dosya boyutu sınırı ayrıca FileService içinde uygulanır.
-
-MVP, web isteği içinde en fazla üç paralel görsel isteğiyle üretim yapar; kalıcı arka plan iş kuyruğu, kesintiden sonra devam etme, ödeme ve çok sunuculu çalışma kapsam dışıdır. Süreç zorla sonlandırılırsa yarım dosyalar kalabilir; rutin depolama bakımı gerekir.
-\nTekrar �al��t�r�labilir test kayna�� ve PowerShell ba�lat�c�s� ��z�m�n yan�ndaki Verification klas�r�ndedir. Verification/Run-SmokeTests.ps1, ayr� test projesini kendi work klas�r�nde �retir; uygulama ��z�m� tek projeli kal�r. Testlerde �cretli API �a�r�s� yap�lmaz.
-
-
-## Yeni katalog düzeni
-Büyük manken, kavisli alt kod paneli, sağda yan yana üst-alt takımlar ve ince bitkisel detaylar. Her üretimde altı sahneden biri seçilir; uygulama çalıştığı sürece aynı kullanıcıya ardışık aynı sahne verilmez. Sahne seçimi yeniden başlatmada sıfırlanır. Kalite OpenAI:Quality ile high yapılabilir; varsayılan medium daha hızlı üretim içindir. Gerçek hız ve görsel kalite bu değişiklikten sonra henüz ölçülmedi.
-
-
-## Logo arka planı
-Logo kompozisyona yerleştirilmeden önce kenarlara bağlı düz arka plan şeffaflaştırılır. JPEG kenarları yumuşatılır; mevcut şeffaflık ve kapalı beyaz logo detayları korunur. Kaydedilen orijinal logo değiştirilmez. Bu yerel işlem API çağrısı yapmaz. Karmaşık/fotoğraf arka planları için şeffaf PNG yüklenmelidir. Önceki katalog dosyaları değiştirilmez.
-
-
-## Katalog yönetimi, cinsiyet ve seri
-Kataloglarım ve sonuç ekranından, onay vererek kendi kataloğunuzu silebilirsiniz. Yeni katalogda kız/erkek manken seçimi ve 1-1000 arası seri adedi zorunludur. Seri adedi PNG üzerinde pieces olarak görünür. Eski kayıtlar boş cinsiyet/seri bilgisiyle korunur. Uygulama adı Barış Kerem Hüseyinoğlu olarak güncellendi; örnek Paffuto yer tutucusu kaldırıldı.
-
-
-## Token bakiyesi ve yeniden üretim
-Kullanıcı başına tek seferlik başlangıç bakiyesi 200 token. Yeni katalog 200, sonuç sayfasındaki aynı girdilerle yeniden üretim 50 token harcar. Bunlar uygulama kredileridir; OpenAI API token miktarlarından bağımsızdır. Admin /Admin/Tokens sayfasında tam kullanıcı adı veya e-posta ile arayarak ekler, düşer, ayarlar ya da sıfırlar. Bakiye üst menüde görünür. Kesinti koşullu atomik SQL güncellemesiyle yapılır. Başarısız üretim rezervasyonu bir kez iade edilir. Katalog kaydı ve başarılı token işlemi aynı veritabanı transaction'ında tamamlanır.
-Yeniden üretim için ana fotoğraf, renk fotoğrafları, bağımsız logo kopyası, marka adı, cinsiyet, yaş ve seri bilgisi saklanır. Kopyalar her katalog için ayrıdır; orijinalin silinmesi yeni kataloğu bozmaz. Eski katalogların daha önce silinmiş renk kaynakları geri getirilemez; bu kayıtlarda yeniden üretim kapalıdır. Katalog silmek token iadesi yapmaz.
-Tek sunuculu MVP: başlangıçta Pending üretim rezervasyonları iade edilir. Bu başlangıç kurtarması birden fazla eşzamanlı uygulama örneğine uygun değildir. Tek instance çalıştırın; çok sunuculu sürümde kalıcı iş kuyruğu ve iş sahipliği gerekir.
-63 test; bakiye, yeniden üretim, admin işlemleri, iade ve eşzamanlı kesintiyi kapsar. Ücretli OpenAI çağrıları yerine HTTP test yanıtları kullanıldı.
-
-
-## Mobil öncelikli arayüz
-Telefonda sabit alt menü, üstte token bakiyesi ve hesap menüsü; okunaklı 16px form alanları ve büyük dokunma alanları. Fotoğraf önizlemelerinde tek tek kaldırma, katalog kartlarında görüntüle/sil ayrımı, sonuç ekranında tam boy görsel ve indirme/yeniden üretim bölümleri. Masaüstünde iki sütun form ve çok sütun katalog arşivi. 320 ve 390 piksel mobil, 1440 piksel masaüstü genişliğinde formun yatay taşma kontrolü yapıldı. 390 piksel arşiv boş durumu ve 1440 piksel form görsel olarak incelendi. Fiziksel iOS/Android cihaz testi yapılmadı. 63 uygulama kontrolü tekrar geçti.
-
-## Otomatik katalog temizliği
-Her kullanıcı için yalnızca son başarılı katalog saklanır. Yeni üretim veya yeniden üretim başarıyla tamamlandığında önceki kayıtlar ve bunların çıktı/kaynak fotoğrafları silinir. Kayıtlı marka logosu ve son kataloğun yeniden üretim girdileri korunur. Uygulama başlangıcında da birikmiş eski kataloglar temizlenir; dolayısıyla Railway redeploy sonrası mevcut arşiv otomatik küçülür. İndirmek istediğiniz eski çıktıları deploy öncesinde kaydedin. Başarısız üretim mevcut kataloğu silmez. Volume yedekleri bu işlemden bağımsızdır.
-
-## Ön / arka baskılı katalog akışı
-Giriş sonrası model türü seçilir. Önü baskılı seçeneği mevcut formu açar. Arkası baskılı seçeneğinde önce 1–10 renk sayısı seçilir, her renk için ayrı ön ve arka fotoğraf yüklenir. İlk renk mankenin giyeceği renktir. Diğer alanlar ve 200/50 token ücretleri aynıdır. Ön/arka fotoğraflar renk bazında iki panelli referansa dönüştürülür; sol ön, sağ arka görünüş olarak AI üretimine gönderilir. Manken görselinde ana ön görünüş ve küçük arka görünüş, renk ürünlerinde iki yüz istenir. Gerçek AI görsel doğruluğu yayın öncesi kontrol edilmelidir. Yeni BackPrintCatalog migration başlangıçta otomatik uygulanır. En fazla 21 dosya için toplam request sınırı 215 MB, dosya başına sınır 10 MB olarak ayarlanmıştır. 87 entegrasyon kontrolü geçti; bu değişiklikte ücretli gerçek AI üretimi yapılmadı.
-
-### Güncel arka baskı akışı
-Her rengin ön fotoğrafı ve yalnızca ilk rengin arka fotoğrafı istenir (4 renk = toplam 5 ürün fotoğrafı). İlk rengin ön/arka referansı manken üretiminde kullanılır. Sol panelde eşit büyüklükte yan yana iki tam boy manken: biri önden, diğeri arkadan görünür; küçük arka görünüş eki kullanılmaz. Sağ panel renklerin ön görünüşlerini gösterir. Eski iki panelli renk referanslarıyla yeniden üretim de desteklenir. 87 kontrol geçti, gerçek AI görseli bu değişiklikte üretilmedi.
-
-### Cep ve renk tekrarı düzeltmesi
-Cepsiz tercihi, referanstaki cep ve dikiş koruma talimatlarının önüne geçer; üst/alt parçaların ön, yan ve arka ceplerinin kaldırılması ve ellerin cepler dışında görünmesi istenir. Bu bir üretim talimatıdır; otomatik görsel doğrulama garantisi değildir. Arkası baskılı kataloglarda ilk renk yalnızca mankenlerde gösterilir, sağdaki ürün üretimi ikinci renkten başlar. Tek renk için boş ürün listesi desteklenir. 90 kontrol geçti.
+OpenAI Docs: [görsel üretimi için talimatlar](https://developers.openai.com/api/docs/guides/image-prompting).

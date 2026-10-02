@@ -22,6 +22,19 @@ public class PromptBuilderService(AgeCalculatorService ages) {
  If the reference contains a complete outfit, use only that outfit. If it contains a SINGLE garment rather than a set, add a plain solid white undershirt underneath when appropriate; for a top-only product add plain white bottoms, and for bottoms-only add a plain white top. Keep the child fully clothed. White basics have no prints, logos or decoration and must not cover the product details. Never invent a matching colored second piece.
  Do not generate any logo, caption, border or typography. {Preserve} {PocketRule(hasPockets)}
  """;
+
+ public string WhiteModel(Catalog catalog,bool pairedReference=false)=>$"""
+ Generate one photorealistic full-body children's clothing e-commerce photograph.
+ Dress exactly ONE fully clothed {(catalog.ModelAge.HasValue && catalog.ModelAgeUnit.HasValue ? $"{catalog.ModelAge} {(catalog.ModelAgeUnit==AgeUnit.Months ? "month" : "year")}-old child" : ages.CalculateModelAge(catalog.Age))}, {(catalog.ModelGender==ModelGender.Girl?"a girl":catalog.ModelGender==ModelGender.Boy?"a boy":"a child")}, in the exact garment color and construction from this reference.
+ {(pairedReference?"This is a two-panel front/back reference sheet: use ONLY the LEFT (front) half for the visible garment. Never place the rear print on the front.":"Use the front-facing garment shown in the input, preserving this color exactly.")}
+ The child faces the camera in a natural pose, with all clothing, hands and feet visible and at least 8% margin on every edge. Keep the child centered.
+ Background: seamless solid opaque pure white #FFFFFF, including the floor. Bright soft studio lighting, only a very subtle neutral contact shadow. No nursery, props, colored wall, border or decorative panel.
+ No added branding, logo, watermark, product code, model number, age label, captions, badges or typography anywhere. Preserve the garment's original printed artwork; these restrictions concern added catalog graphics.
+ For a single garment, use plain white unprinted basics to complete the outfit and keep the child fully clothed. Never invent a matching colored second piece.
+ {Preserve}
+ {PocketRule(catalog.HasPockets)}
+ """;
+
  public string Variant(CatalogScene? scene=null,bool? hasPockets=null)=>$"""
  {PocketRule(hasPockets)}
  Create a horizontal catalog product photograph of ONLY the exact clothing set in the reference.
