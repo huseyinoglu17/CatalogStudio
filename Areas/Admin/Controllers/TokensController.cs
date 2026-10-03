@@ -5,14 +5,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace CatalogStudio.Areas.Admin.Controllers;
 [Area("Admin"),Authorize(Roles="Admin")]
-public class TokensController(AppDbContext db,TokenService tokens):Controller {
+public class TokensController(AppDbContext db,TokenService tokens,PricingService pricing):Controller {
  public async Task<IActionResult> Index(string? search) {
+ ViewBag.ColorTokenPrice=await pricing.GetColorPrice();
  ViewBag.Search=search;
  var q=db.Users.AsNoTracking();
  if(!string.IsNullOrWhiteSpace(search)){var key=search.Trim().ToUpperInvariant();q=q.Where(x=>x.NormalizedEmail==key||x.NormalizedUserName==key);}
  var users=await q.OrderBy(x=>x.Email).Take(100).ToListAsync();
  var balances=new Dictionary<int,long>();foreach(var user in users)balances[user.Id]=await tokens.Balance(user.Id);
  ViewBag.Balances=balances;return View(users);
+ }
+ [HttpPost] public async Task<IActionResult> UpdatePrice(int colorTokenPrice) {
+ if(!ModelState.IsValid || !await pricing.SetColorPrice(colorTokenPrice))return BadRequest();
+ TempData["Message"]="Renk başına token ücreti güncellendi. Yeniden üretim 25 token olarak kaldı.";return RedirectToAction("Index");
  }
  [HttpPost] public async Task<IActionResult> Change(string search,string operation,long amount) {
  if(!ModelState.IsValid)return BadRequest();

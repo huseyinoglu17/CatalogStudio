@@ -23,15 +23,42 @@ public class PromptBuilderService(AgeCalculatorService ages) {
  Do not generate any logo, caption, border or typography. {Preserve} {PocketRule(hasPockets)}
  """;
 
+
+ public static string DecorationRule(DecorationType type)=>type switch {
+ DecorationType.Embroidery => "MATERIAL CONSTRUCTION: This garment is EMBROIDERED, not screen printed. Preserve real raised thread, visible stitch paths, satin/fill stitches, thread direction, tiny fiber highlights, embroidered borders and stitch relief/shadows. Copy the exact embroidered artwork shape, scale and location. Never flatten the embroidery into an ink print, sticker, painted patch or smooth vector graphic.",
+ DecorationType.Print => "MATERIAL CONSTRUCTION: Preserve the reference ink print exactly; do not turn printed artwork into embroidery.",
+ DecorationType.Mixed => "MATERIAL CONSTRUCTION: This garment combines EMBROIDERY and PRINT. Distinguish each reference region: keep embroidery as raised individual threads with exact stitch relief and keep printed regions as ink. Never convert one technique into the other.",
+ _ => "MATERIAL CONSTRUCTION: Inspect the reference decoration closely. If it is embroidered, retain raised thread, stitch directions, individual fibers, stitched borders and relief/shadows; never flatten embroidery into ink. If it is printed, retain ink. Keep the original technique, artwork shape, scale and location."
+ };
+ public static string Correction(Catalog catalog)=>string.IsNullOrWhiteSpace(catalog.GenerationInstructions)?"":$"""
+ REQUESTED REVISION:
+ Reason: {System.Text.Json.JsonSerializer.Serialize(catalog.RegenerationReason)}
+ {System.Text.Json.JsonSerializer.Serialize(catalog.GenerationInstructions)}
+ Apply these visual corrections together, retaining earlier corrections unless a newer request explicitly replaces them. Keep the selected age, gender, garment color, garment decoration technique, pocket choice and original artwork. Preserve fully clothed children. For WHITE MODEL requests, the background remains pure white and no catalog logo or product-code labels may be added. Background changes apply to the branded SCENE request only.
+ """;
+ public string SceneFromWhite(Catalog catalog,CatalogScene scene)=>$"""
+ SCENE FROM CANONICAL WHITE MODEL:
+ Image 1 is the approved white-background MODEL photograph. Use that exact child's identity, face, hair, body proportions, garment color, garment shape and stitching as the source. Do not redesign, reinterpret or replace the clothing. Change the background and lighting only, preserving the garment details and material texture.
+ Image 2 is the original garment reference used ONLY to confirm artwork and material construction. The selected pocket choice overrides any reference pockets.
+ {(string.IsNullOrEmpty(catalog.DetailImagePath)?"":"Image 3 is a close-up material/artwork reference. Use it only to retain thread/stitch construction and artwork; never copy its background or replace the first image's garment color.")}
+ Art direction: {scene.Description}. Subtle props stay behind the children and never cover the outfit.
+ {(catalog.BackPrint ? "Image 2 is a front/back contact sheet: LEFT is FRONT, RIGHT is BACK. Show exactly TWO same-age models side by side at equal full-body scale: the left faces forward with the exact identity and front outfit from Image 1; the right faces away, wearing the same color, with the BACK artwork from Image 2's RIGHT half. No inset or thumbnail; never copy back artwork to the front." : "Show exactly ONE child facing the camera, preserving the full-body pose of Image 1.")}
+ Keep all hands and feet visible. Keep all children inside the central 85% of the frame width. Reserve top-left quiet space for the logo and bottom 18% for the product label; these graphics are added separately.
+ No generated logos, product codes, captions or typography.
+ {DecorationRule(catalog.DecorationType)}
+ {PocketRule(catalog.HasPockets)}
+ """;
+
  public string WhiteModel(Catalog catalog,bool pairedReference=false)=>$"""
  Generate one photorealistic full-body children's clothing e-commerce photograph.
  Dress exactly ONE fully clothed {(catalog.ModelAge.HasValue && catalog.ModelAgeUnit.HasValue ? $"{catalog.ModelAge} {(catalog.ModelAgeUnit==AgeUnit.Months ? "month" : "year")}-old child" : ages.CalculateModelAge(catalog.Age))}, {(catalog.ModelGender==ModelGender.Girl?"a girl":catalog.ModelGender==ModelGender.Boy?"a boy":"a child")}, in the exact garment color and construction from this reference.
  {(pairedReference?"This is a two-panel front/back reference sheet: use ONLY the LEFT (front) half for the visible garment. Never place the rear print on the front.":"Use the front-facing garment shown in the input, preserving this color exactly.")}
  The child faces the camera in a natural pose, with all clothing, hands and feet visible and at least 8% margin on every edge. Keep the child centered.
  Background: seamless solid opaque pure white #FFFFFF, including the floor. Bright soft studio lighting, only a very subtle neutral contact shadow. No nursery, props, colored wall, border or decorative panel.
- No added branding, logo, watermark, product code, model number, age label, captions, badges or typography anywhere. Preserve the garment's original printed artwork; these restrictions concern added catalog graphics.
+ No added branding, logo, watermark, product code, model number, age label, captions, badges or typography anywhere. Preserve the garment's original embroidered or printed artwork; these restrictions concern added catalog graphics.
  For a single garment, use plain white unprinted basics to complete the outfit and keep the child fully clothed. Never invent a matching colored second piece.
  {Preserve}
+ {DecorationRule(catalog.DecorationType)}
  {PocketRule(catalog.HasPockets)}
  """;
 

@@ -9,7 +9,7 @@ public class CatalogRetentionService(AppDbContext db, FileService files, ILogger
 {
     private static readonly SemaphoreSlim Gate = new(1);
     static IEnumerable<string> Names(Catalog c) =>
-        new[] { c.GeneratedCatalogPath, c.MainProductImagePath, c.LogoSnapshotPath }
+        new[] { c.GeneratedCatalogPath, c.MainProductImagePath, c.LogoSnapshotPath, c.DetailImagePath }
         .Concat(JsonSerializer.Deserialize<List<string>>(c.VariantPathsJson) ?? [])
         .Concat(JsonSerializer.Deserialize<List<string>>(c.WhiteModelPathsJson) ?? [])
         .Where(x => !string.IsNullOrWhiteSpace(x));

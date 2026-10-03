@@ -1,4 +1,4 @@
-@{ ViewData["Title"] = "Renk sayısı"; var mode = ViewBag.CatalogMode as string ?? "front"; }
+@{ ViewData["Title"] = "Renk sayısı"; var mode = ViewBag.CatalogMode as string ?? "front"; var colorTokenPrice = (int?)ViewBag.ColorTokenPrice ?? 75; }
 <section class="panel color-count-panel">
     <p class="eyebrow">@(mode == "back" ? "ARKASI BASKILI MODEL" : "ÖNÜ BASKILI MODEL")</p>
     <h1>Kaç renk var?</h1>
@@ -6,11 +6,11 @@
     @if (mode == "back") { <p>İlk renk için ön ve arka fotoğraf, diğer renkler için yalnızca ön fotoğraf istenecek.</p> }
     else { <p>İlk renk için ürün fotoğrafı, ardından diğer renklerin fotoğrafları istenecek.</p> }
     <p>Her renk için ayrıca beyaz fonda, marka ve ürün kodu olmadan mankenli fotoğraf hazırlanır.</p>
-    <form method="get" action="/" id="color-count-form">
+    <form method="get" action="/" id="color-count-form" data-color-token-price="@colorTokenPrice">
         <input type="hidden" name="mode" value="@mode"/>
         <label for="color-count">Toplam renk sayısı</label>
         <input id="color-count" name="count" class="form-control" type="number" inputmode="numeric" min="1" max="10" required placeholder="Örn. 4" aria-describedby="color-cost"/>
-        <p class="upload-help" id="color-cost" aria-live="polite">Renk başına 75 token · Yeniden üretim sabit 25 token</p>
+        <p class="upload-help" id="color-cost" aria-live="polite">Renk başına @colorTokenPrice token · Yeniden üretim sabit 25 token</p>
         <div class="step-actions"><button class="btn btn-primary">Fotoğraflara devam et</button><a class="btn btn-outline-dark" href="/">Geri</a></div>
     </form>
 </section>

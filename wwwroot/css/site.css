@@ -6,3 +6,6 @@
 @media(max-width:767px){.selected-colors{align-items:flex-start;flex-direction:column;gap:8px;padding:14px}.step-actions>.btn{flex:1}.white-photos-section{margin-top:26px}.white-photo-grid{gap:16px}.white-photo-info{padding:12px}.white-photo-info .btn{padding:10px 12px}}
 @media(max-width:479px){.white-photo-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+.optional-label{font-weight:400;color:var(--muted)}
+.regeneration-chat{margin-top:20px}.chat-message{background:#edf3e8;border-radius:12px 12px 12px 3px;padding:14px;margin:16px 0 10px}.chat-message:first-of-type{margin-top:0}.chat-speaker{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:650}.chat-message label{font-size:15px;margin:5px 0 6px}.chat-message p{font-size:13px;margin:0}.chat-answer{resize:vertical;min-height:84px;background:#fff}.regeneration-chat>.btn{margin-top:20px}.last-revision{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}.last-revision summary{font-size:14px;cursor:pointer}.last-revision p{font-size:13px;white-space:pre-wrap;margin-top:12px}.pricing-example{font-size:14px;color:var(--muted);margin-top:14px}.token-price-panel{max-width:780px}

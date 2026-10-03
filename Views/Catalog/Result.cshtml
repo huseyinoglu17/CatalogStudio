@@ -1,13 +1,14 @@
 @model Catalog
 @{
     ViewData["Title"] = "Katalog hazır";
+    var regeneration = ViewBag.Regeneration as RegenerationRequest ?? new RegenerationRequest();
     var whiteImageCount = 0;
     try { whiteImageCount = System.Text.Json.JsonSerializer.Deserialize<string[]>(Model.WhiteModelPathsJson ?? "[]")?.Length ?? 0; }
     catch (System.Text.Json.JsonException) { }
 }
 <a class="back-link" href="/Catalog/MyCatalogs">← Kataloglarım</a>
 <div class="page-heading">
-    <div><p class="eyebrow">KATALOG HAZIR</p><h1>#@Model.ProductCode</h1><div class="catalog-tags"><span>@Model.Age</span>@if(Model.SeriesCount.HasValue){<span>@Model.SeriesCount pieces</span>}<span>@Model.OutputWidth × @Model.OutputHeight piksel</span></div></div>
+    <div><p class="eyebrow">KATALOG HAZIR</p><h1>#@Model.ProductCode</h1><div class="catalog-tags"><span>@Model.Age</span>@if(Model.SeriesCount.HasValue){<span>@Model.SeriesCount pieces</span>}<span>Markalı · @Model.OutputWidth × @Model.OutputHeight piksel</span></div></div>
     <a class="btn btn-primary" href="/Catalog/Image/@Model.Id?download=true">@(whiteImageCount == 1 ? "Markalı fotoğrafı indir" : "Kataloğu indir")</a>
 </div>
 <div class="result-grid">
@@ -17,12 +18,12 @@
         @if (whiteImageCount > 0)
         {
             <section class="white-photos-section" aria-labelledby="white-photos-title">
-                <div class="section-heading"><h2 id="white-photos-title">Beyaz fonlu manken fotoğrafları</h2><p>Her renk ayrı fotoğraf · Marka ve ürün kodu olmadan</p></div>
+                <div class="section-heading"><h2 id="white-photos-title">Beyaz fonlu manken fotoğrafları</h2><p>Her renk ayrı fotoğraf · Marka ve ürün kodu olmadan · @Model.WhiteOutputWidth × @Model.WhiteOutputHeight piksel</p></div>
                 <div class="white-photo-grid">
                     @for(var i=0;i<whiteImageCount;i++)
                     {
                         <article class="white-photo-card">
-                            <a href="/Catalog/WhiteImage/@Model.Id?index=@i" target="_blank" rel="noopener" aria-label="@(i+1). rengin beyaz fonlu fotoğrafını tam boy aç"><img src="/Catalog/WhiteImage/@Model.Id?index=@i" alt="@(i+1). rengin beyaz fonda mankenli fotoğrafı" width="@Model.OutputWidth" height="@Model.OutputHeight" loading="lazy"/></a>
+                            <a href="/Catalog/WhiteImage/@Model.Id?index=@i" target="_blank" rel="noopener" aria-label="@(i+1). rengin beyaz fonlu fotoğrafını tam boy aç"><img src="/Catalog/WhiteImage/@Model.Id?index=@i" alt="@(i+1). rengin beyaz fonda mankenli fotoğrafı" width="@Model.WhiteOutputWidth" height="@Model.WhiteOutputHeight" loading="lazy"/></a>
                             <div class="white-photo-info"><h3>@(i+1). renk</h3><a class="btn btn-outline-dark" href="/Catalog/WhiteImage/@Model.Id?index=@i&download=true">PNG indir</a></div>
                         </article>
                     }
@@ -31,11 +32,25 @@
         }
     </div>
     <aside>
-        <section class="panel"><h2>Farklı bir çekim dene</h2>
+        <section class="panel regeneration-panel"><h2>Fotoğrafları düzenle</h2>
             @if(!string.IsNullOrEmpty(Model.LogoSnapshotPath)&&!string.IsNullOrEmpty(Model.MainProductImagePath))
             {
-                <p>Aynı ürünler, logo, bilgiler ve fotoğraf boyutuyla yeni bir arka planda tekrar oluştur. Beyaz fonlu fotoğraflar da yeniden hazırlanır.</p>
-                <form asp-action="Regenerate" method="post" data-generation="true" data-confirm="Yeniden üretim sabit 25 token harcar. Yeni katalog hazır olduğunda bu katalog ve fotoğrafları silinir. Devam edilsin mi?"><input type="hidden" name="id" value="@Model.Id"/><button class="btn btn-primary w-100" data-idle-label="Yeniden oluştur · 25 token">Yeniden oluştur · 25 token</button></form>
+                <p>İstediğin değişikliği anlat. Aynı ürün bilgileri ve seçtiğin iki fotoğraf boyutu kullanılarak markalı ve beyaz fonlu fotoğraflar birlikte yeniden hazırlanır.</p>
+                <form asp-action="Regenerate" method="post" data-generation="true" class="regeneration-chat" data-confirm="Yeniden üretim sabit 25 token harcar. Yeni katalog hazır olduğunda bu katalog ve fotoğrafları silinir. Devam edilsin mi?">
+                    <input type="hidden" name="id" value="@Model.Id"/>
+                    <div asp-validation-summary="All" class="validation-box text-danger" role="alert"></div>
+                    <div class="chat-message"><span class="chat-speaker">Katalog asistanı</span><label for="regeneration-reason">Neden yeniden oluşturuyorsun?</label><p>Fotoğrafta gördüğün sorunu veya yeni çekim isteğini söyle.</p></div>
+                    <textarea id="regeneration-reason" name="Reason" required maxlength="500" rows="2" class="form-control chat-answer" placeholder="Örn. Nakış baskı gibi görünüyor." aria-describedby="reason-validation">@regeneration.Reason</textarea>
+                    <span id="reason-validation" class="text-danger field-validation-valid" data-valmsg-for="Reason" data-valmsg-replace="true"></span>
+                    <div class="chat-message"><span class="chat-speaker">Katalog asistanı</span><label for="regeneration-changes">Ne değişmeli?</label><p>Korunacak ayrıntıları ve yapılacak değişiklikleri açıkça yaz.</p></div>
+                    <textarea id="regeneration-changes" name="Changes" required maxlength="2000" rows="4" class="form-control chat-answer" placeholder="Örn. Ayıcık nakışında iplik dokusunu ve kabartıyı koru. Renk ve kıyafetin kesimi aynı kalsın." aria-describedby="changes-validation">@regeneration.Changes</textarea>
+                    <span id="changes-validation" class="text-danger field-validation-valid" data-valmsg-for="Changes" data-valmsg-replace="true"></span>
+                    <button class="btn btn-primary w-100" data-idle-label="Yeniden oluştur · 25 token">Yeniden oluştur · 25 token</button>
+                </form>
+                @if(!string.IsNullOrWhiteSpace(Model.RegenerationReason))
+                {
+                    <details class="last-revision"><summary>Son değişiklik isteği</summary><p><strong>Neden:</strong> @Model.RegenerationReason</p><p><strong>Değişiklikler:</strong> @(string.IsNullOrWhiteSpace(Model.RegenerationChanges)?Model.GenerationInstructions:Model.RegenerationChanges)</p></details>
+                }
                 <p class="upload-help">Saklamak istediğin fotoğrafları yeniden üretimden önce indir.</p>
             }
             else

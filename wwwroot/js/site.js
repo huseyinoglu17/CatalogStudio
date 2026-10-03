@@ -25,24 +25,35 @@ const form=document.getElementById('catalog-form');
 function syncCreationPrice(){
  const count=document.getElementById('ColorCount'),button=document.getElementById('generate'),price=document.getElementById('creation-cost');
  if(!count||!button||!price)return;
- const cost=Math.max(1,Math.min(10,Number(count.value)||1))*75;
+ const unitPrice=Number(form?.dataset.colorTokenPrice)||75;
+ const cost=Math.max(1,Math.min(10,Number(count.value)||1))*unitPrice;
  price.textContent=cost+' token';button.dataset.idleLabel='Kataloğu oluştur · '+cost+' token';
  if(!button.disabled)button.textContent=button.dataset.idleLabel;
 }
-function syncOutputSize(){
- const fields=document.getElementById('custom-size-fields'),width=document.getElementById('OutputWidth'),height=document.getElementById('OutputHeight'),preview=document.getElementById('format-preview');
+function syncSizeChoice(name,fieldsId,widthId,heightId,previewId){
+ const fields=document.getElementById(fieldsId),width=document.getElementById(widthId),height=document.getElementById(heightId),preview=previewId?document.getElementById(previewId):null;
  if(!fields||!width||!height)return;
- const custom=document.querySelector('[name=CustomSize]:checked')?.value==='true';
+ const custom=document.querySelector('[name='+name+']:checked')?.value==='true';
  fields.hidden=!custom;[width,height].forEach(input=>{input.required=custom;input.disabled=!custom;});
  if(preview)preview.textContent=custom?(width.value&&height.value?width.value+' × '+height.value:'Özel boyut'):'1400 × 1100';
 }
-document.querySelectorAll('[name=CustomSize]').forEach(input=>input.addEventListener('change',syncOutputSize));
-['OutputWidth','OutputHeight'].forEach(id=>document.getElementById(id)?.addEventListener('input',syncOutputSize));
+function syncOutputSize(){
+ syncSizeChoice('CustomSize','custom-size-fields','OutputWidth','OutputHeight','format-preview');
+ syncSizeChoice('WhiteCustomSize','white-custom-size-fields','WhiteOutputWidth','WhiteOutputHeight');
+}
+document.querySelectorAll('[name=CustomSize],[name=WhiteCustomSize]').forEach(input=>input.addEventListener('change',syncOutputSize));
+['OutputWidth','OutputHeight','WhiteOutputWidth','WhiteOutputHeight'].forEach(id=>document.getElementById(id)?.addEventListener('input',syncOutputSize));
 syncOutputSize();syncCreationPrice();
 if(form){const min=document.getElementById('MinimumAge'),max=document.getElementById('MaximumAge'),unit=document.getElementById('AgeUnit');function age(){max.max=unit.value==='Years'?18:216;min.max=max.max;max.setCustomValidity(+min.value>+max.value?'Minimum yaş maksimum yaştan büyük olamaz.':'');document.getElementById('age-preview').textContent='Bu aralık katalogda ürün beden bilgisi olarak gösterilir.';}[min,max,unit].forEach(x=>x.addEventListener('input',age));age();form.addEventListener('submit',()=>{document.getElementById('generate').disabled=true;document.getElementById('generate').textContent='Fotoğraflar hazırlanıyor…';document.getElementById('progress').hidden=false;});}
 
 const colorCount=document.getElementById('color-count'),colorCost=document.getElementById('color-cost');
-if(colorCount&&colorCost){const showColorPrice=()=>{const count=Number(colorCount.value);colorCost.textContent=Number.isInteger(count)&&count>=1&&count<=10?count+' renk × 75 token = '+(count*75)+' token · Yeniden üretim 25 token':'Renk başına 75 token · Yeniden üretim sabit 25 token';};colorCount.addEventListener('input',showColorPrice);showColorPrice();}
+if(colorCount&&colorCost){const unitPrice=Number(document.getElementById('color-count-form')?.dataset.colorTokenPrice)||75;const showColorPrice=()=>{const count=Number(colorCount.value);colorCost.textContent=Number.isInteger(count)&&count>=1&&count<=10?count+' renk × '+unitPrice+' token = '+(count*unitPrice)+' token · Yeniden üretim 25 token':'Renk başına '+unitPrice+' token · Yeniden üretim sabit 25 token';};colorCount.addEventListener('input',showColorPrice);showColorPrice();}
+
+const decoration=document.getElementById('DecorationType'),embroideryFields=document.getElementById('embroidery-detail-fields');
+if(decoration&&embroideryFields){const syncDecoration=()=>{const show=['Embroidery','Mixed','1','3'].includes(decoration.value);embroideryFields.hidden=!show;const input=embroideryFields.querySelector('input[type=file]');if(input)input.disabled=!show;};decoration.addEventListener('change',syncDecoration);syncDecoration();}
+
+const colorTokenPrice=document.getElementById('color-token-price'),pricingExample=document.getElementById('pricing-example');
+if(colorTokenPrice&&pricingExample){colorTokenPrice.addEventListener('input',()=>{const price=Number(colorTokenPrice.value);pricingExample.textContent=Number.isInteger(price)&&price>=1&&price<=100000?'4 renk = '+(price*4)+' token':'1–100000 arasında bir token ücreti gir.';});}
 document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault();}));
 document.querySelectorAll('form[data-generation]').forEach(form=>form.addEventListener('submit',event=>{if(event.defaultPrevented)return;const button=form.querySelector('button');if(button){button.disabled=true;button.textContent='Yeniden oluşturuluyor…';}}));
 document.addEventListener('click',event=>{document.querySelectorAll('.account-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;});});

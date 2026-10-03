@@ -30,6 +30,6 @@ public class FileService(IStoragePathService paths)
         } catch {if(result!=null)File.Delete(result);throw;}
         finally {Delete(a);Delete(b);}
     }
-    public void DeleteCatalog(CatalogStudio.Models.Catalog c){ Delete(c.GeneratedCatalogPath); Delete(c.MainProductImagePath); Delete(c.LogoSnapshotPath); foreach(var name in (System.Text.Json.JsonSerializer.Deserialize<List<string>>(c.VariantPathsJson)??[]).Concat(System.Text.Json.JsonSerializer.Deserialize<List<string>>(c.WhiteModelPathsJson)??[])) Delete(name); }
+    public void DeleteCatalog(CatalogStudio.Models.Catalog c){ Delete(c.DetailImagePath); Delete(c.GeneratedCatalogPath); Delete(c.MainProductImagePath); Delete(c.LogoSnapshotPath); foreach(var name in (System.Text.Json.JsonSerializer.Deserialize<List<string>>(c.VariantPathsJson)??[]).Concat(System.Text.Json.JsonSerializer.Deserialize<List<string>>(c.WhiteModelPathsJson)??[])) Delete(name); }
     public void Delete(string? name) { if (!string.IsNullOrEmpty(name)) File.Delete(PathFor(name)); }
 }

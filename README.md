@@ -66,7 +66,7 @@ Invoke-WebRequest http://localhost:8080/health
 
 Bu komutta API/admin secret verilmeden health 200 dönmelidir. Production giriş testi HTTPS reverse proxy üzerinden yapılmalıdır. İşiniz bittiğinde `docker stop catalog-local` ve `docker rm catalog-local` ile test container'ını kaldırabilirsiniz; named volume kalır.
 
-Teslimdeki `Verification/Run-SmokeTests.ps1` console tabanlı entegrasyon doğrulamasını çalıştırır; ana projede ayrı test SDK projesi olmadığından `dotnet test` tek başına bu kontrolleri çalıştırmaz. 74 kontrol; üyelik, yetkiler, logo, katalog, token, yeniden üretim, production admin, secure cookie, forwarded HTTPS ve restart sonrası oturum korumasını kapsar. OpenAI çağrıları testte taklit edilir; bu deployment doğrulamasında ücretli gerçek üretim yapılmadı. Release build 0 uyarı/0 hata, Docker build başarılı; gerçek Linux container health 200 ve kalıcı volume restart testi başarılı.
+Teslimdeki `Verification/Run-SmokeTests.ps1` console tabanlı entegrasyon doğrulamasını çalıştırır; ana projede ayrı test SDK projesi olmadığından `dotnet test` tek başına bu kontrolleri çalıştırmaz. Güncel sürümde 169 kontrol geçti; OpenAI çağrıları taklit edilir. Release build 0 uyarı/0 hata ile başarılı. Önceki deployment hazırlığında Docker build, Linux container health ve kalıcı volume restart doğrulanmıştı; 3 Ekim güncellemesinde Docker build yeniden çalıştırılmadı.
 
 Kaynaklar: [Railway volumes](https://docs.railway.com/volumes), [healthchecks](https://docs.railway.com/deployments/healthchecks), [domain yönetimi](https://docs.railway.com/networking/domains/working-with-domains).
 
@@ -114,8 +114,9 @@ dotnet run --launch-profile http --urls http://localhost:5187
 2. Marka adı ve logo girin. Daha önce logo yüklediyseniz her yeni katalogda tekrar kullanmayı açıkça seçin veya yeni logo yükleyin.
 3. Pozitif tam sayı ürün kodunu ve yaş aralığını girin.
 4. Model türünü ve toplam renk sayısını (1–10) seçin; istenen ürün fotoğraflarını yükleyin.
-5. Standart veya özel fotoğraf boyutunu seçip üretimi başlatın. Tamamlanana kadar sayfayı açık tutun.
-6. Sonuç ekranından markalı kataloğu ve her rengin ayrı beyaz fonlu PNG fotoğrafını indirin. Yalnızca son katalog paketi saklanır.
+5. Ürün desenini seçin (otomatik, nakışlı, baskılı veya ikisi birlikte). Nakışlı üründe isteğe bağlı net bir yakın çekim ekleyin.
+6. Markalı kolajın ve ayrı beyaz fonlu fotoğrafların boyutlarını birbirinden bağımsız seçip üretimi başlatın. Tamamlanana kadar sayfayı açık tutun.
+7. Sonuç ekranından markalı kataloğu ve her rengin ayrı beyaz fonlu PNG fotoğrafını indirin. Yalnızca son katalog paketi saklanır. Yeniden üretimde sohbet alanlarına nedeni ve yapılacak değişiklikleri yazın.
 
 PNG, JPEG ve WebP; dosya başına 10 MB, görsel başına 24 megapiksel sınırı uygulanır. Görseller sunucuda yeniden PNG olarak kodlanır; EXIF kaldırılır. Tarayıcı önizlemeleri ve sürükle-bırak desteklenir. Hatalı gönderimden sonra dosyaları tekrar seçmek gerekir.
 
@@ -124,12 +125,13 @@ PNG, JPEG ve WebP; dosya başına 10 MB, görsel başına 24 megapiksel sınır�
 - Ayrı metin analizi yoktur; ürün fotoğrafı doğrudan görsel düzenleme isteğine gönderilir.
 - Referansla görsel düzenleme: istenen `gpt-image-2`, Images Edits API.
 - Görsel modeli OpenAI:ImageModel ayarıyla değiştirilebilir; mevcut model gpt-image-2 olarak korunmuştur.
-- GPT Image 2 için `input_fidelity` gönderilmez; `output_format=png`, `size=1024x1536`, `quality=medium` kullanılır.
-- Her ana/renk görseli kendi referans fotoğrafıyla doğrudan düzenlenir. Logo AI'a gönderilmez.
+- GPT Image 2 için `input_fidelity` gönderilmez; `output_format=png` kullanılır. Varsayılan kalite medium; nakışlı/karma desen veya yakın çekim eklenen ürün high kalitede üretilir. Boyut isteğin türüne göre seçilir.
+- İlk rengin beyaz fonlu manken fotoğrafı önce hazırlanır. Markalı çekimde bu fotoğraf ilk referans, orijinal ürün ikinci referans olarak kullanılır; aynı mankenin ve kıyafetin korunması istenir. Nakış yakın çekimi varsa ayrıca gönderilir. Logo AI'a gönderilmez.
+- Diğer renklerin beyaz manken ve düz ürün fotoğrafları kendi kaynaklarıyla hazırlanır. Nakışta kabarık iplik, dikiş yönü, lif, kenar ve gölgelerin korunması, baskıya dönüştürülmemesi istenir.
 - Final canvas, gerçek logo, kod ve İngilizce yaş metni C# / ImageSharp ile birleştirilir.
 - Her API isteğinin 5 dakika zaman aşımı vardır; iptal belirteci aktarılır. Yalnızca açık 429 cevapları en fazla iki kez yeniden denenir. Belirsiz hatalarda çift ücret riskini önlemek için otomatik üretim tekrarı yapılmaz.
 - Başarısız işlemin dosyaları ve başarılı işlemin ara görselleri temizlenir; orijinal ana ürün, son PNG ve kayıtlı logo tutulur.
-- N renk için N ana/ürün düzenlemesi ve N beyaz model düzenlemesi, toplam 2N AI isteği yapılır. En fazla üç istek paralel çalışır.
+- N renk için N ana/ürün düzenlemesi ve N beyaz model düzenlemesi, toplam 2N AI isteği yapılır. En fazla üç istek paralel çalışır; markalı çekim ilk beyaz görselin tamamlanmasını bekler.
 - AI ürün ayrıntılarını değiştirebilir. Yayın öncesinde renk, baskı, kesim ve dikişleri orijinal ürünle karşılaştırın. Piksel düzeyinde aynı ürün garantisi verilmez.
 
 Resmî kaynaklar (10 Eylül 2026):
@@ -197,9 +199,9 @@ App_Data/                 Yerel veritabanı ve özel dosyalar (pakete dahil edil
 - Birden fazla renk: markalı ve ürün kodlu toplu katalog + her renk için ayrı beyaz fonlu manken fotoğrafı.
 - Tek renk: güzel arka planlı, markalı ve ürün kodlu tam alan manken fotoğrafı + beyaz fonda marka/kod eklenmeyen tek manken fotoğrafı.
 - Arkası baskılı ana katalogda iki manken önden/arkadan görünür. İlk renk sağdaki ürünlerde tekrarlanmaz. Ayrı beyaz fonlu fotoğraflar renklerin önden mankenli görünüşlerini gösterir.
-- Standart boyut tüm çıktılar için 1400 × 1100 pikseldir. Özel boyutta genişlik/yükseklik ayrı girilir: her biri 256–4096 piksel. Çıktılar PNG olarak tam bu ölçülerde hazırlanır; oran bozulmaması için gerektiğinde düz fonla boşluk eklenir. Bu ayar nihai dosya boyutudur, AI'ın yerel üretim çözünürlüğünü artırmaz.
-- Yeni üretim: toplam renk sayısı × 75 token. Örnek: 1 renk 75, 4 renk 300, 10 renk 750 token.
-- Yeniden üretim: renk sayısından bağımsız sabit 25 token; ana katalog ve tüm beyaz fonlu görseller yeniden hazırlanır, aynı ölçüler korunur.
+- Markalı kolaj ve beyaz fonlu tekli fotoğraflar için iki ayrı boyut seçimi vardır. Her biri bağımsız olarak standart 1400 × 1100 veya özel genişlik/yükseklik (256–4096 piksel) olabilir. Çıktılar PNG olarak tam bu ölçülerde hazırlanır; oran bozulmaması için gerektiğinde düz fonla boşluk eklenir. Bu ayar nihai dosya boyutudur, AI'ın yerel üretim çözünürlüğünü artırmaz.
+- Yeni üretim: toplam renk sayısı × adminin belirlediği renk başı token ücreti. Varsayılan 75 tokendir. Admin → Token yönetimi → Renk başına token ücreti alanından 1–100000 arasında ayarlanır ve veritabanında saklanır. Üretim anında fiyat değişmişse yeni fiyat gösterilir ve form tekrar gönderilmeden kesinti yapılmaz.
+- Yeniden üretim: renk sayısından bağımsız sabit 25 token; ana katalog ve tüm beyaz fonlu görseller yeniden hazırlanır, iki ayrı ölçü korunur. Sebep (en fazla 500 karakter) ve istenen değişiklikler (en fazla 2000 karakter) zorunludur. Sohbet alanları hata durumunda korunur. Düzeltmeler görsel isteğine aktarılır; sonraki yeniden üretimler önceki düzeltmeleri de korur, çelişen yeni talep önceliklidir. Toplam düzeltme metni 12000 karakterle sınırlıdır.
 - Sonuç ekranında tüm fotoğraflar ayrı önizlenir ve indirilir. WhiteImage endpointi yalnızca sahibi veya Admin için açıktır.
 
 Başlangıç bakiyesi 200 token, adminin kullanıcı adı/e-posta ile token ekleme/çıkarma/ayarlama işlevleri korunur. Krediler uygulama içi birimlerdir; OpenAI API token ücretlerinden bağımsızdır. Kesinti koşullu atomik SQL güncellemesiyle yapılır. Katalog ve tüm beyaz çıktılar başarıyla kaydedilmeden işlem tamamlanmış sayılmaz. Başarısız üretimde rezervasyon bir kez iade edilir; önceki katalog korunur.
@@ -208,20 +210,20 @@ Başlangıç bakiyesi 200 token, adminin kullanıcı adı/e-posta ile token ekle
 
 Her kullanıcı için yalnızca son başarılı katalog paketi tutulur. Yeni üretim veya yeniden üretim tamamlandığında önceki ana çıktı, beyaz fonlu fotoğraflar ve kaynak görseller silinir. Kayıtlı marka logosu korunur. Startup sırasında da birikmiş eski kataloglar temizlenir. Katalog silmek token iadesi yapmaz. Yedekler bu temizlikten bağımsızdır.
 
-Ana fotoğraf, renk kaynakları, logo kopyası, marka/cep/cinsiyet/yaş/seri ve nihai ölçüler tekrar üretim için saklanır. Eski kataloglarda beyaz çıktı listesi boş, boyut 1400 × 1100 olarak migrate edilir; tekrar üretim yeni çıktıları oluşturur. Kaynakları geçmişte silinmiş kataloglar tekrar üretilemez.
+Ana fotoğraf, renk kaynakları, logo kopyası, isteğe bağlı nakış detayı, marka/cep/cinsiyet/yaş/seri/desen, iki ayrı çıktı boyutu ve düzeltme metni tekrar üretim için saklanır. Mevcut katalogların eski ortak boyutu migration ile beyaz fotoğraf ölçülerine de kopyalanır. Kaynakları geçmişte silinmiş kataloglar tekrar üretilemez. Katalog silindiğinde nakış detayı da temizlenir.
 
 Tek instance kullanın. Startup'ta Pending rezervasyonlar iade edilir; çok sunuculu iş sahipliği ve kalıcı iş kuyruğu bu sürümde yoktur. İşlem sırasında süreç zorla kapatılırsa dosya bakımı gerekebilir.
 
 ## Görsel kuralları ve mobil arayüz
 
-Cepsiz seçimi referanstaki cep koruma talimatının önüne geçer; ön/yan/arka ceplerin kaldırılması ve ellerin görünür olması istenir. Tek parça ürün sade beyaz tamamlayıcı kıyafetle giydirilir. Logo AI'a gönderilmez; katalog kompozisyonunda arka planı yerel olarak kaldırılır. Beyaz model fotoğrafında ek logo, ürün kodu, yaş, seri metni ve dekor bulunmaz; ürünün orijinal baskısı korunur.
+Cepsiz seçimi referanstaki cep koruma talimatının önüne geçer; ön/yan/arka ceplerin kaldırılması ve ellerin görünür olması istenir. Tek parça ürün sade beyaz tamamlayıcı kıyafetle giydirilir. Logo AI'a gönderilmez; katalog kompozisyonunda arka planı yerel olarak kaldırılır. Beyaz model fotoğrafında ek logo, ürün kodu, yaş, seri metni ve dekor bulunmaz; ürünün orijinal baskı veya nakışı korunur. Yeniden üretim talebindeki arka plan değişiklikleri yalnızca markalı çekime uygulanır; beyaz çıktılar beyaz kalır.
 
-Telefonda sabit alt menü, üstte bakiye, büyük form alanları ve ayrı fotoğraf indirme kartları vardır. 390 piksel mobil ve 1440 piksel masaüstünde yeni formlar incelendi; özel boyut alanları ve renk ücretleri kontrol edildi.
+Telefonda sabit alt menü, üstte bakiye, büyük form alanları ve ayrı fotoğraf indirme kartları vardır. 390 piksel mobil formda nakış ve iki ayrı özel boyut alanı, 1440 piksel masaüstünde admin fiyat alanı incelendi; yatay taşma görülmedi.
 
 ## Doğrulama
 
-Release build 0 hata / 0 uyarı ile başarılı. 127 entegrasyon kontrolü geçti: üyelik, admin, yetkiler, logo, renk başına ücret, sabit yeniden üretim, tek renk ön/arka akış, her rengin beyaz çıktısı, boyutlar, yetkili indirme, başarısız üretimde iade ve dosya temizliği, kalıcı cookie ve production health.
+Release build 0 hata / 0 uyarı ile başarılı. 169 entegrasyon kontrolü geçti: üyelik, admin, yetkiler, logo, dinamik renk fiyatı, hatalı/değişmiş fiyat teklifinde kesinti yapılmaması, sabit yeniden üretim, sohbet doğrulaması ve önceki düzeltmelerin korunması, nakış yakın çekimi/kalitesi, markalı istekte üretilen beyaz görselin ilk referans olması, tek renk ön/arka akış, her rengin beyaz çıktısı, bağımsız boyutlar ve eski boyut migration'ı, yetkili indirme, başarısız üretimde iade ve dosya temizliği, kalıcı cookie ve production health.
 
-Verification/Run-SmokeTests.ps1, console test projesini kendi work klasöründe oluşturur. Testler MVC, Identity, SQLite, ImageSharp ve gerçek API istemcisi üzerinden çalışır; yalnızca OpenAI HTTP yanıtları taklit edilir. Ücretli gerçek görsel üretimi bu güncellemede yapılmadı; beyaz fon, ürün benzerliği ve cep kuralının görsel doğruluğu gerçek örneklerle ayrıca değerlendirilmelidir.
+Verification/Run-SmokeTests.ps1, console test projesini kendi work klasöründe oluşturur. Testler MVC, Identity, SQLite, ImageSharp ve gerçek API istemcisi üzerinden çalışır; yalnızca OpenAI HTTP yanıtları taklit edilir. Ücretli gerçek görsel üretimi bu güncellemede yapılmadı; nakış dokusu, aynı manken/kıyafet ve beyaz fonun görsel doğruluğu gerçek ürün örnekleriyle ayrıca değerlendirilmelidir.
 
 OpenAI Docs: [görsel üretimi için talimatlar](https://developers.openai.com/api/docs/guides/image-prompting).
